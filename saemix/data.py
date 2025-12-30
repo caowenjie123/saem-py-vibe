@@ -39,6 +39,7 @@ class SaemixData:
         self.units = units if units else {}
         self.verbose = verbose
         self.automatic = automatic
+        self.yorig = None
         
         self._load_data()
         self._validate_data()

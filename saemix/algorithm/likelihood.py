@@ -16,14 +16,15 @@ def _normalize_ytype(ytype, ntypes):
     return ytype_arr
 
 
-def _log_const_exponential(yobs, ytype, error_model):
+def _log_const_exponential(yobs, ytype, error_model, yorig=None):
     idx_exp = [i for i, em in enumerate(error_model) if em == "exponential"]
     if not idx_exp or ytype is None:
         return 0.0
     ytype_norm = _normalize_ytype(ytype, len(error_model))
+    ybase = yorig if yorig is not None else yobs
     mask = np.isin(ytype_norm, idx_exp)
     if np.any(mask):
-        return -np.sum(yobs[mask])
+        return -np.sum(ybase[mask])
     return 0.0
 
 
@@ -59,6 +60,7 @@ def llis_saemix(saemix_object):
     i1_omega2 = model.indx_omega
     nphi1 = len(i1_omega2)
     yobs = data.data[data.name_response].values
+    yorig = getattr(data, "yorig", None)
     xind = data.data[data.name_predictors].values
     index = data.data['index'].values
     ytype = data.data['ytype'].values if 'ytype' in data.data.columns else None
@@ -114,7 +116,7 @@ def llis_saemix(saemix_object):
     XM = np.tile(xind, (MM, 1))
     ytypeM = np.tile(ytype_norm, MM) if ytype_norm is not None else None
     
-    log_const = _log_const_exponential(yobs, ytype_norm, model.error_model)
+    log_const = _log_const_exponential(yobs, ytype_norm, model.error_model, yorig=yorig)
     c2 = np.log(np.linalg.det(omega_sub)) + nphi1 * np.log(2 * np.pi)
     c1 = np.log(2 * np.pi)
     
@@ -185,6 +187,7 @@ def llgq_saemix(saemix_object):
     i1_omega2 = model.indx_omega
     nphi1 = len(i1_omega2)
     yobs = data.data[data.name_response].values
+    yorig = getattr(data, "yorig", None)
     xind = data.data[data.name_predictors].values
     index = data.data['index'].values
     ytype = data.data['ytype'].values if 'ytype' in data.data.columns else None
@@ -220,7 +223,7 @@ def llgq_saemix(saemix_object):
     a = (xmin + xmax) / 2
     b = (xmax - xmin) / 2
     
-    log_const = _log_const_exponential(yobs, ytype_norm, model.error_model)
+    log_const = _log_const_exponential(yobs, ytype_norm, model.error_model, yorig=yorig)
     
     Q = np.zeros(data.n_subjects)
     for j in range(x.shape[0]):

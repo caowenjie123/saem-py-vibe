@@ -7,6 +7,7 @@ from saemix.control import saemix_control
 from saemix.algorithm.initialization import initialise_main_algo
 from saemix.algorithm.saem import run_saem
 from saemix.utils import transphi
+from saemix.utils import cutoff
 
 
 def saemix(
@@ -22,6 +23,28 @@ def saemix(
     if not isinstance(data, SaemixData):
         raise TypeError("data must be a SaemixData instance")
     
+    # Handle exponential error models: log-transform response and store original
+    if isinstance(model.error_model, list) and "exponential" in model.error_model:
+        yname = data.name_response
+        ytype = data.data['ytype'].values if 'ytype' in data.data.columns else None
+        ytype_arr = ytype.copy() if ytype is not None else None
+        if ytype_arr is not None and len(model.error_model) > 1:
+            if ytype_arr.min() >= 1 and ytype_arr.max() == len(model.error_model):
+                ytype_arr = ytype_arr - 1
+        if data.yorig is None:
+            data.yorig = data.data[yname].copy()
+        yvals = data.data[yname].values.copy()
+        for ityp, em in enumerate(model.error_model):
+            if em != "exponential":
+                continue
+            if ytype_arr is None:
+                mask = np.ones(len(yvals), dtype=bool)
+            else:
+                mask = ytype_arr == ityp
+            if np.any(mask):
+                yvals[mask] = np.log(cutoff(yvals[mask]))
+        data.data[yname] = yvals
+
     saemix_object = SaemixObject(data=data, model=model, options=control)
     
     xinit = initialise_main_algo(data, model, control)

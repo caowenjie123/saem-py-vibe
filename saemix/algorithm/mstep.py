@@ -132,15 +132,21 @@ def mstep(kiter, Uargs, Dargs, opt, structural_model, phiM, varList, suffStat, m
         mean_phi = _estimate_mean_phi(phiM, Uargs)
         
         # Update omega
-        omega = np.zeros_like(varList['omega'])
+        omega_full = np.zeros_like(varList['omega'])
         ind_eta = varList['ind_eta']
         if len(ind_eta) > 0:
             mean_phiM = np.tile(mean_phi, (nchains, 1))
             eta = phiM[:, ind_eta] - mean_phiM[:, ind_eta]
             omega_eta = (eta.T @ eta) / max(eta.shape[0], 1)
-            omega[np.ix_(ind_eta, ind_eta)] = omega_eta
-        omega = np.where(omega < 0, 1e-6, omega)
-        varList['omega'] = omega
+            omega_full[np.ix_(ind_eta, ind_eta)] = omega_eta
+        omega_full = np.where(omega_full < 0, 1e-6, omega_full)
+        omega_new = np.zeros_like(varList['omega'])
+        indest_omega = Uargs.get('indest_omega', None)
+        if indest_omega is not None:
+            omega_new[indest_omega] = omega_full[indest_omega]
+        else:
+            omega_new = omega_full
+        varList['omega'] = omega_new
         
         # Residual error update
         if Dargs.get('modeltype', 'structural') == "structural":
