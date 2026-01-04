@@ -29,6 +29,7 @@ from saemix import (
     export_to_csv,
     PlotOptions,
     set_plot_options,
+    get_plot_options,
     reset_plot_options,
 )
 

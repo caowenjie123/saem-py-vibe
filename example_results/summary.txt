@@ -1,0 +1,26 @@
+============================================================
+SAEMIX Results Summary
+============================================================
+
+Model Information:
+  Description: One-compartment PK model (full random effects)
+  Number of subjects: 12
+  Total observations: 120
+
+Fixed Effects:
+
+Variance Components (Omega diagonal):
+  omega[1,1]: 0.3138
+  omega[2,2]: 0.0234
+  omega[3,3]: 0.0537
+
+Residual Error Parameters:
+  sigma[1]: 0.7244
+  sigma[2]: 0.0000
+
+Model Fit:
+  Log-likelihood: -167.8309
+  AIC: 349.6618
+  BIC: 353.0561
+
+============================================================

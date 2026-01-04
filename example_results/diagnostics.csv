@@ -1,0 +1,10 @@
+metric,value
+log_likelihood,-167.83088012352553
+log_likelihood_is,-167.83088012352553
+AIC,349.66176024705106
+BIC,353.0561067955671
+AIC_is,349.66176024705106
+BIC_is,353.0561067955671
+n_subjects,12.0
+n_observations,120.0
+n_parameters,7.0
