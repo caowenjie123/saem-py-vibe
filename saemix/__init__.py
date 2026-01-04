@@ -41,6 +41,8 @@ get_plot_options : Get current plot options
 reset_plot_options : Reset to default options
 """
 
+from saemix._version import __version__, __version_info__
+
 try:
     from saemix.data import SaemixData, saemix_data
     from saemix.model import SaemixModel, saemix_model
@@ -94,6 +96,9 @@ try:
     )
 
     __all__ = [
+        # Version info
+        "__version__",
+        "__version_info__",
         # Core classes
         "SaemixData",
         "saemix_data",

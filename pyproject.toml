@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saemix"
+dynamic = ["version"]
+description = "SAEM algorithm for nonlinear mixed effects models in Python"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+authors = [
+    {name = "saemix developers"}
+]
+keywords = ["saem", "mixed-effects", "pharmacometrics", "nlme", "statistics", "nonlinear", "population-pk"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+dependencies = [
+    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+    "scipy>=1.7.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.4.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "hypothesis>=6.0.0",
+    "black>=23.0.0",
+    "isort>=5.0.0",
+    "mypy>=1.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+all = ["saemix[plot,dev]"]
+
+[project.urls]
+Homepage = "https://github.com/saemixdevelopment/saemix-python"
+Documentation = "https://github.com/saemixdevelopment/saemix-python#readme"
+Repository = "https://github.com/saemixdevelopment/saemix-python"
+Issues = "https://github.com/saemixdevelopment/saemix-python/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "saemix._version.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["saemix*"]
+exclude = ["tests*", "examples*", "saemix-main*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
