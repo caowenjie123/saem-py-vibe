@@ -5,6 +5,8 @@ try:
     from saemix.results import SaemixObject, SaemixRes
     from saemix.main import saemix
     from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
+    from saemix.algorithm.conddist import conddist_saemix, compute_gelman_rubin
+    from saemix.compare import compare_saemix, aic, bic, loglik
     from saemix.diagnostics import (
         plot_observed_vs_pred,
         plot_residuals,
@@ -30,6 +32,12 @@ try:
         "saemix",
         "llis_saemix",
         "llgq_saemix",
+        "conddist_saemix",
+        "compute_gelman_rubin",
+        "compare_saemix",
+        "aic",
+        "bic",
+        "loglik",
         "plot_observed_vs_pred",
         "plot_residuals",
         "plot_individual_fits",
