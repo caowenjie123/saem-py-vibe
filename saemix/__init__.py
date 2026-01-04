@@ -1,3 +1,46 @@
+"""
+saemix - Python implementation of the SAEM algorithm for nonlinear mixed effects models.
+
+This package provides tools for:
+- Fitting nonlinear mixed effects models using the SAEM algorithm
+- Computing conditional distributions of individual parameters
+- Model comparison using information criteria (AIC, BIC)
+- Stepwise covariate selection
+- Simulation from fitted models
+- Comprehensive diagnostic plots
+- Result export and visualization
+
+Main Classes
+------------
+SaemixData : Data container for SAEM analysis
+SaemixModel : Model specification for SAEM
+SaemixObject : Main result object containing fitted model
+SaemixRes : Results storage class
+
+Main Functions
+--------------
+saemix : Fit a nonlinear mixed effects model using SAEM
+saemix_data : Create a SaemixData object
+saemix_model : Create a SaemixModel object
+saemix_control : Create control options for SAEM
+conddist_saemix : Compute conditional distributions
+compare_saemix : Compare multiple fitted models
+simulate_saemix : Simulate from fitted models
+
+Export Functions
+----------------
+save_results : Save all results to directory
+export_to_csv : Export specific results to CSV
+save_plots : Save diagnostic plots
+
+Plot Options
+------------
+PlotOptions : Configuration class for plot appearance
+set_plot_options : Set global plot options
+get_plot_options : Get current plot options
+reset_plot_options : Reset to default options
+"""
+
 try:
     from saemix.data import SaemixData, saemix_data
     from saemix.model import SaemixModel, saemix_model
@@ -7,6 +50,16 @@ try:
     from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
     from saemix.algorithm.conddist import conddist_saemix, compute_gelman_rubin
     from saemix.compare import compare_saemix, aic, bic, loglik
+    from saemix.stepwise import (
+        forward_procedure,
+        backward_procedure,
+        stepwise_procedure,
+    )
+    from saemix.simulation import (
+        simulate_saemix,
+        simulate_discrete_saemix,
+        simulate_with_uncertainty,
+    )
     from saemix.diagnostics import (
         plot_observed_vs_pred,
         plot_residuals,
@@ -19,9 +72,29 @@ try:
         compute_residuals,
         plot_gof,
         plot_eta_distributions,
+        plot_convergence,
+        plot_likelihood,
+        plot_parameters_vs_covariates,
+        plot_randeff_vs_covariates,
+        plot_marginal_distribution,
+        plot_correlations,
+    )
+    from saemix.export import (
+        save_results,
+        export_to_csv,
+        save_plots,
+    )
+    from saemix.plot_options import (
+        PlotOptions,
+        set_plot_options,
+        get_plot_options,
+        reset_plot_options,
+        apply_plot_options,
+        merge_options,
     )
 
     __all__ = [
+        # Core classes
         "SaemixData",
         "saemix_data",
         "SaemixModel",
@@ -30,14 +103,26 @@ try:
         "SaemixObject",
         "SaemixRes",
         "saemix",
+        # Likelihood
         "llis_saemix",
         "llgq_saemix",
+        # Conditional distribution
         "conddist_saemix",
         "compute_gelman_rubin",
+        # Model comparison
         "compare_saemix",
         "aic",
         "bic",
         "loglik",
+        # Stepwise selection
+        "forward_procedure",
+        "backward_procedure",
+        "stepwise_procedure",
+        # Simulation
+        "simulate_saemix",
+        "simulate_discrete_saemix",
+        "simulate_with_uncertainty",
+        # Diagnostics
         "plot_observed_vs_pred",
         "plot_residuals",
         "plot_individual_fits",
@@ -49,6 +134,23 @@ try:
         "compute_residuals",
         "plot_gof",
         "plot_eta_distributions",
+        "plot_convergence",
+        "plot_likelihood",
+        "plot_parameters_vs_covariates",
+        "plot_randeff_vs_covariates",
+        "plot_marginal_distribution",
+        "plot_correlations",
+        # Export
+        "save_results",
+        "export_to_csv",
+        "save_plots",
+        # Plot options
+        "PlotOptions",
+        "set_plot_options",
+        "get_plot_options",
+        "reset_plot_options",
+        "apply_plot_options",
+        "merge_options",
     ]
 except ImportError:
     pass

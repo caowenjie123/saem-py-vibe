@@ -11,6 +11,40 @@ def _require_matplotlib():
     return plt
 
 
+def _apply_plot_options():
+    """Apply global plot options if available."""
+    try:
+        from saemix.plot_options import apply_plot_options
+
+        apply_plot_options()
+    except ImportError:
+        pass  # plot_options not available
+
+
+def _get_figsize(local_figsize=None):
+    """Get figure size from local or global options."""
+    if local_figsize is not None:
+        return local_figsize
+    try:
+        from saemix.plot_options import get_plot_options
+
+        return get_plot_options().figsize
+    except ImportError:
+        return (10, 8)
+
+
+def _get_alpha(local_alpha=None):
+    """Get alpha value from local or global options."""
+    if local_alpha is not None:
+        return local_alpha
+    try:
+        from saemix.plot_options import get_plot_options
+
+        return get_plot_options().alpha
+    except ImportError:
+        return 0.7
+
+
 def plot_observed_vs_pred(saemix_object, pred_type="ppred", ax=None):
     """
     Scatter plot of observed vs predicted values.
@@ -42,7 +76,7 @@ def compute_residuals(saemix_object, pred_type="ppred", standardized=True):
     pred = saemix_object.predict(type=pred_type)
     if not standardized:
         return yobs - pred
-    ytype = data.data['ytype'].values if 'ytype' in data.data.columns else None
+    ytype = data.data["ytype"].values if "ytype" in data.data.columns else None
     ytype_norm = _normalize_ytype(ytype, len(model.error_model))
     g = error_function(pred, res.respar, model.error_model, ytype_norm)
     return (yobs - pred) / g
@@ -78,12 +112,14 @@ def plot_individual_fits(saemix_object, pred_type="ppred", n=6):
     xname = data.name_X if data.name_X else data.name_predictors[0]
     x = data.data[xname].values
     y = data.data[data.name_response].values
-    idx = data.data['index'].values
+    idx = data.data["index"].values
     subjects = np.unique(idx)
     n = min(n, len(subjects))
     ncols = int(np.ceil(np.sqrt(n)))
     nrows = int(np.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(4 * ncols, 3 * nrows), squeeze=False
+    )
     for k in range(n):
         ax = axes[k // ncols][k % ncols]
         sid = subjects[k]
@@ -135,7 +171,12 @@ def plot_gof(saemix_object, pred_type="ppred"):
     qq = np.sort(resid)
     theo = norm.ppf((np.arange(1, len(qq) + 1) - 0.5) / len(qq))
     ax.scatter(theo, qq, s=10)
-    ax.plot([theo.min(), theo.max()], [theo.min(), theo.max()], color="black", linestyle="--")
+    ax.plot(
+        [theo.min(), theo.max()],
+        [theo.min(), theo.max()],
+        color="black",
+        linestyle="--",
+    )
     ax.set_title("Residual QQ plot")
     ax.set_xlabel("Theoretical quantiles")
     ax.set_ylabel("Sample quantiles")
@@ -151,13 +192,17 @@ def plot_eta_distributions(saemix_object, use_map=True):
     res = saemix_object.results
     eta = res.map_eta if use_map else res.cond_mean_eta
     if eta is None:
-        raise ValueError("Eta not available; run MAP estimation or compute conditional means.")
+        raise ValueError(
+            "Eta not available; run MAP estimation or compute conditional means."
+        )
     if hasattr(eta, "values"):
         eta = eta.values
     npar = eta.shape[1]
     ncols = int(np.ceil(np.sqrt(npar)))
     nrows = int(np.ceil(npar / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(4 * ncols, 3 * nrows), squeeze=False
+    )
     for j in range(npar):
         ax = axes[j // ncols][j % ncols]
         ax.hist(eta[:, j], bins=30, density=True, alpha=0.7)
@@ -182,7 +227,7 @@ def simulate_observations(saemix_object, nsim=1000, pred_type="ppred", seed=None
     yobs = data.data[data.name_response].values
     nobs = len(yobs)
     f = saemix_object.predict(type=pred_type)
-    ytype = data.data['ytype'].values if 'ytype' in data.data.columns else None
+    ytype = data.data["ytype"].values if "ytype" in data.data.columns else None
     error_model = model.error_model
     pres = res.respar
     ytype_norm = _normalize_ytype(ytype, len(error_model))
@@ -201,7 +246,11 @@ def simulate_observations(saemix_object, nsim=1000, pred_type="ppred", seed=None
         for ityp, em in enumerate(error_model):
             if em != "exponential":
                 continue
-            mask = ytype_norm == ityp if ytype_norm is not None else np.zeros(nobs, dtype=bool)
+            mask = (
+                ytype_norm == ityp
+                if ytype_norm is not None
+                else np.zeros(nobs, dtype=bool)
+            )
             if np.any(mask):
                 a = pres[2 * ityp]
                 ysim[:, mask] = f[None, mask] * np.exp(a * eps[:, mask])
@@ -249,7 +298,9 @@ def plot_npde(saemix_object, nsim=1000, pred_type="ppred", seed=None, show_tests
     plt = _require_matplotlib()
     data = saemix_object.data
     yobs = data.data[data.name_response].values
-    ysim = simulate_observations(saemix_object, nsim=nsim, pred_type=pred_type, seed=seed)
+    ysim = simulate_observations(
+        saemix_object, nsim=nsim, pred_type=pred_type, seed=seed
+    )
     npde = compute_npde(yobs, ysim)
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
     ax = axes[0, 0]
@@ -263,7 +314,12 @@ def plot_npde(saemix_object, nsim=1000, pred_type="ppred", seed=None, show_tests
     theo = norm.ppf((np.arange(1, len(qq) + 1) - 0.5) / len(qq))
     ax = axes[0, 1]
     ax.scatter(theo, qq, s=10)
-    ax.plot([theo.min(), theo.max()], [theo.min(), theo.max()], color="black", linestyle="--")
+    ax.plot(
+        [theo.min(), theo.max()],
+        [theo.min(), theo.max()],
+        color="black",
+        linestyle="--",
+    )
     ax.set_title("NPDE QQ plot")
     ax.set_xlabel("Theoretical quantiles")
     ax.set_ylabel("Sample quantiles")
@@ -293,7 +349,16 @@ def plot_npde(saemix_object, nsim=1000, pred_type="ppred", seed=None, show_tests
     return fig
 
 
-def plot_vpc(saemix_object, nsim=1000, pred_type="ppred", bins=10, ci=0.9, seed=None, by=None, ncols=2):
+def plot_vpc(
+    saemix_object,
+    nsim=1000,
+    pred_type="ppred",
+    bins=10,
+    ci=0.9,
+    seed=None,
+    by=None,
+    ncols=2,
+):
     """
     Visual predictive check with simulated quantile bands.
     If by is provided, facets are created per covariate level/bin.
@@ -303,13 +368,17 @@ def plot_vpc(saemix_object, nsim=1000, pred_type="ppred", bins=10, ci=0.9, seed=
     xname = data.name_X if data.name_X else data.name_predictors[0]
     x = data.data[xname].values
     y = data.data[data.name_response].values
-    ysim = simulate_observations(saemix_object, nsim=nsim, pred_type=pred_type, seed=seed)
+    ysim = simulate_observations(
+        saemix_object, nsim=nsim, pred_type=pred_type, seed=seed
+    )
     q = np.array([0.05, 0.5, 0.95])
     groups = _get_by_groups(data, by, max_levels=6, nbins=4)
     n_panels = len(groups)
     ncols = min(max(1, ncols), n_panels)
     nrows = int(np.ceil(n_panels / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(8 * ncols, 4 * nrows), squeeze=False)
+    fig, axes = plt.subplots(
+        nrows, ncols, figsize=(8 * ncols, 4 * nrows), squeeze=False
+    )
     for gi, (label, gmask) in enumerate(groups):
         ax = axes[gi // ncols][gi % ncols]
         xg = x[gmask]
@@ -320,7 +389,9 @@ def plot_vpc(saemix_object, nsim=1000, pred_type="ppred", bins=10, ci=0.9, seed=
         obs_q = np.full((bins, len(q)), np.nan)
         sim_q = np.full((nsim, bins, len(q)), np.nan)
         for b in range(bins):
-            mask = (xg >= edges[b]) & (xg <= edges[b + 1] if b == bins - 1 else xg < edges[b + 1])
+            mask = (xg >= edges[b]) & (
+                xg <= edges[b + 1] if b == bins - 1 else xg < edges[b + 1]
+            )
             if not np.any(mask):
                 continue
             obs_q[b, :] = np.quantile(yg[mask], q)
@@ -332,9 +403,23 @@ def plot_vpc(saemix_object, nsim=1000, pred_type="ppred", bins=10, ci=0.9, seed=
         sim_lo = np.nanquantile(sim_q, lo, axis=0)
         sim_hi = np.nanquantile(sim_q, hi, axis=0)
         for i, label_q in enumerate(["5%", "50%", "95%"]):
-            ax.plot(mids, obs_q[:, i], color="black", linestyle="-", label=f"Observed {label_q}" if i == 1 else None)
-            ax.plot(mids, sim_med[:, i], color="tab:blue", linestyle="--", label=f"Sim median {label_q}" if i == 1 else None)
-            ax.fill_between(mids, sim_lo[:, i], sim_hi[:, i], color="tab:blue", alpha=0.2)
+            ax.plot(
+                mids,
+                obs_q[:, i],
+                color="black",
+                linestyle="-",
+                label=f"Observed {label_q}" if i == 1 else None,
+            )
+            ax.plot(
+                mids,
+                sim_med[:, i],
+                color="tab:blue",
+                linestyle="--",
+                label=f"Sim median {label_q}" if i == 1 else None,
+            )
+            ax.fill_between(
+                mids, sim_lo[:, i], sim_hi[:, i], color="tab:blue", alpha=0.2
+            )
         ax.set_title(f"VPC {label}")
         ax.set_xlabel(xname)
         ax.set_ylabel(data.name_response)
@@ -373,6 +458,808 @@ def _get_by_groups(data, by, max_levels=6, nbins=4):
     edges = np.quantile(col.values, np.linspace(0, 1, nbins + 1))
     groups = []
     for b in range(nbins):
-        mask = (col >= edges[b]) & (col <= edges[b + 1] if b == nbins - 1 else col < edges[b + 1])
+        mask = (col >= edges[b]) & (
+            col <= edges[b + 1] if b == nbins - 1 else col < edges[b + 1]
+        )
         groups.append((f"{by} bin {b+1}", mask))
     return groups
+
+
+# =============================================================================
+# Convergence Diagnostic Plots (Requirements 6.1, 6.2)
+# =============================================================================
+
+
+def plot_convergence(
+    saemix_object,
+    parameters=None,
+    figsize=None,
+    show_burnin=True,
+    burnin_color="lightgray",
+):
+    """
+    Plot parameter estimates versus iteration number for convergence diagnostics.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object with iteration history
+    parameters : list of str, optional
+        Parameter names to plot. If None, plots all parameters.
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    show_burnin : bool
+        Whether to shade the burn-in region
+    burnin_color : str
+        Color for burn-in region shading
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The convergence plot figure
+
+    Notes
+    -----
+    Requires that the SAEM algorithm was run with iteration history recording
+    (parpop attribute in results).
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize) if figsize is None else figsize
+
+    res = saemix_object.results
+    model = saemix_object.model
+
+    # Check if iteration history is available
+    if res.parpop is None:
+        raise ValueError(
+            "Iteration history not available. "
+            "Run SAEM with iteration history recording enabled."
+        )
+
+    parpop = res.parpop
+    n_iter, n_params = parpop.shape
+
+    # Get parameter names
+    param_names = model.name_modpar if hasattr(model, "name_modpar") else None
+    if param_names is None:
+        param_names = [f"theta{i+1}" for i in range(n_params)]
+
+    # Filter parameters if specified
+    if parameters is not None:
+        param_indices = []
+        filtered_names = []
+        for p in parameters:
+            if isinstance(p, int):
+                if 0 <= p < n_params:
+                    param_indices.append(p)
+                    filtered_names.append(param_names[p])
+            elif p in param_names:
+                param_indices.append(param_names.index(p))
+                filtered_names.append(p)
+        if not param_indices:
+            raise ValueError(f"No valid parameters found. Available: {param_names}")
+        param_names = filtered_names
+    else:
+        param_indices = list(range(n_params))
+
+    n_plot = len(param_indices)
+    ncols = min(3, n_plot)
+    nrows = int(np.ceil(n_plot / ncols))
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
+
+    iterations = np.arange(1, n_iter + 1)
+
+    # Get burn-in iteration count from options if available
+    burnin_iter = 0
+    if hasattr(saemix_object, "options") and saemix_object.options:
+        burnin_iter = saemix_object.options.get("nbiter_burn", 0)
+        if burnin_iter == 0:
+            # Try alternative key
+            burnin_iter = saemix_object.options.get("nbiter", {})
+            if isinstance(burnin_iter, dict):
+                burnin_iter = burnin_iter.get("burn", 0)
+
+    for idx, (param_idx, name) in enumerate(zip(param_indices, param_names)):
+        ax = axes[idx // ncols][idx % ncols]
+
+        # Plot parameter trajectory
+        ax.plot(iterations, parpop[:, param_idx], color="tab:blue", linewidth=1)
+
+        # Shade burn-in region
+        if show_burnin and burnin_iter > 0:
+            ax.axvspan(0, burnin_iter, alpha=0.3, color=burnin_color, label="Burn-in")
+            ax.axvline(burnin_iter, color="gray", linestyle="--", linewidth=0.8)
+
+        # Add final estimate line
+        if res.fixed_effects is not None and param_idx < len(res.fixed_effects):
+            ax.axhline(
+                res.fixed_effects[param_idx],
+                color="red",
+                linestyle="--",
+                linewidth=1,
+                label="Final estimate",
+            )
+
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel(name)
+        ax.set_title(f"Convergence: {name}")
+
+    # Hide unused subplots
+    for idx in range(n_plot, nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    # Add legend to first subplot
+    if show_burnin and burnin_iter > 0:
+        axes[0][0].legend(loc="upper right", fontsize=8)
+
+    fig.tight_layout()
+    return fig
+
+
+def plot_likelihood(
+    saemix_object,
+    figsize=None,
+    show_burnin=True,
+    burnin_color="lightgray",
+):
+    """
+    Plot log-likelihood trajectory during SAEM estimation.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object with iteration history
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    show_burnin : bool
+        Whether to shade the burn-in region
+    burnin_color : str
+        Color for burn-in region shading
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The likelihood trajectory plot
+
+    Notes
+    -----
+    Requires that the SAEM algorithm was run with likelihood tracking.
+    If per-iteration likelihood is not available, displays the final likelihood.
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize) if figsize is None else figsize
+
+    res = saemix_object.results
+
+    # Check if we have iteration-level likelihood
+    ll_history = None
+    if hasattr(res, "ll_history") and res.ll_history is not None:
+        ll_history = res.ll_history
+    elif res.allpar is not None:
+        # Try to extract from allpar if it contains likelihood
+        pass
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Get burn-in iteration count
+    burnin_iter = 0
+    if hasattr(saemix_object, "options") and saemix_object.options:
+        burnin_iter = saemix_object.options.get("nbiter_burn", 0)
+        if burnin_iter == 0:
+            burnin_iter = saemix_object.options.get("nbiter", {})
+            if isinstance(burnin_iter, dict):
+                burnin_iter = burnin_iter.get("burn", 0)
+
+    if ll_history is not None and len(ll_history) > 0:
+        iterations = np.arange(1, len(ll_history) + 1)
+        ax.plot(iterations, ll_history, color="tab:blue", linewidth=1.5)
+
+        # Shade burn-in region
+        if show_burnin and burnin_iter > 0:
+            ax.axvspan(0, burnin_iter, alpha=0.3, color=burnin_color, label="Burn-in")
+            ax.axvline(burnin_iter, color="gray", linestyle="--", linewidth=0.8)
+
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("Log-likelihood")
+        ax.set_title("Log-likelihood Trajectory")
+
+    else:
+        # No iteration history, show final likelihood as horizontal line
+        if res.ll is not None:
+            ax.axhline(
+                res.ll, color="tab:blue", linewidth=2, label=f"Final LL: {res.ll:.2f}"
+            )
+            ax.set_ylabel("Log-likelihood")
+            ax.set_title("Final Log-likelihood")
+            ax.legend()
+            # Add text annotation
+            ax.text(
+                0.5,
+                0.5,
+                f"Final Log-likelihood: {res.ll:.4f}\n\n"
+                "(Per-iteration likelihood not recorded)",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=12,
+            )
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "Likelihood not available.\nRun likelihood computation first.",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=12,
+            )
+            ax.set_title("Log-likelihood (Not Available)")
+
+    fig.tight_layout()
+    return fig
+
+
+# =============================================================================
+# Parameter-Covariate Relationship Plots (Requirements 6.3, 6.4)
+# =============================================================================
+
+
+def plot_parameters_vs_covariates(
+    saemix_object,
+    covariates=None,
+    parameters=None,
+    use_map=True,
+    figsize=None,
+    alpha=None,
+):
+    """
+    Plot individual parameter estimates versus covariate values.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object
+    covariates : list of str, optional
+        Covariate names to plot. If None, uses all available covariates.
+    parameters : list of str, optional
+        Parameter names to plot. If None, plots all parameters.
+    use_map : bool
+        If True, use MAP estimates; otherwise use conditional mean estimates.
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    alpha : float, optional
+        Transparency for scatter points. If None, uses global plot options.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The parameter vs covariate plot
+
+    Notes
+    -----
+    For continuous covariates, displays scatter plots.
+    For categorical covariates (<=6 unique values), displays box plots.
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize)
+    alpha = _get_alpha(alpha)
+
+    data = saemix_object.data
+    model = saemix_object.model
+    res = saemix_object.results
+
+    # Get individual parameter estimates
+    if use_map:
+        phi = res.map_phi if res.map_phi is not None else res.map_psi
+    else:
+        phi = res.cond_mean_phi if res.cond_mean_phi is not None else res.cond_mean_psi
+
+    if phi is None:
+        raise ValueError(
+            "Individual parameter estimates not available. "
+            "Run MAP estimation or conditional distribution estimation first."
+        )
+
+    # Convert to numpy array if DataFrame
+    if hasattr(phi, "values"):
+        phi = phi.values
+
+    n_subjects = phi.shape[0]
+    n_params = phi.shape[1]
+
+    # Get parameter names
+    param_names = model.name_modpar if hasattr(model, "name_modpar") else None
+    if param_names is None:
+        param_names = [f"theta{i+1}" for i in range(n_params)]
+
+    # Get available covariates
+    available_covs = data.name_covariates if data.name_covariates else []
+    if not available_covs:
+        raise ValueError("No covariates available in the data.")
+
+    # Filter covariates
+    if covariates is not None:
+        cov_list = [c for c in covariates if c in available_covs]
+        if not cov_list:
+            raise ValueError(f"No valid covariates found. Available: {available_covs}")
+    else:
+        cov_list = available_covs
+
+    # Filter parameters
+    if parameters is not None:
+        param_indices = []
+        filtered_names = []
+        for p in parameters:
+            if isinstance(p, int):
+                if 0 <= p < n_params:
+                    param_indices.append(p)
+                    filtered_names.append(param_names[p])
+            elif p in param_names:
+                param_indices.append(param_names.index(p))
+                filtered_names.append(p)
+        if not param_indices:
+            raise ValueError(f"No valid parameters found. Available: {param_names}")
+        param_names = filtered_names
+    else:
+        param_indices = list(range(n_params))
+
+    # Get covariate values per subject (first observation per subject)
+    df = data.data.copy()
+    cov_per_subject = df.groupby("index")[cov_list].first()
+
+    n_covs = len(cov_list)
+    n_plot_params = len(param_indices)
+
+    fig, axes = plt.subplots(n_plot_params, n_covs, figsize=figsize, squeeze=False)
+
+    for i, (param_idx, pname) in enumerate(zip(param_indices, param_names)):
+        for j, cov_name in enumerate(cov_list):
+            ax = axes[i][j]
+            cov_values = cov_per_subject[cov_name].values
+            param_values = phi[:, param_idx]
+
+            # Determine if categorical or continuous
+            unique_vals = np.unique(cov_values[~np.isnan(cov_values)])
+            is_categorical = len(unique_vals) <= 6
+
+            if is_categorical:
+                # Box plot for categorical
+                groups = []
+                labels = []
+                for val in sorted(unique_vals):
+                    mask = cov_values == val
+                    if np.any(mask):
+                        groups.append(param_values[mask])
+                        labels.append(str(val))
+                if groups:
+                    bp = ax.boxplot(groups, labels=labels, patch_artist=True)
+                    for patch in bp["boxes"]:
+                        patch.set_facecolor("tab:blue")
+                        patch.set_alpha(0.5)
+            else:
+                # Scatter plot for continuous
+                valid_mask = ~np.isnan(cov_values)
+                ax.scatter(
+                    cov_values[valid_mask],
+                    param_values[valid_mask],
+                    alpha=alpha,
+                    edgecolor="none",
+                )
+                # Add trend line
+                if np.sum(valid_mask) > 2:
+                    z = np.polyfit(cov_values[valid_mask], param_values[valid_mask], 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(
+                        np.min(cov_values[valid_mask]),
+                        np.max(cov_values[valid_mask]),
+                        100,
+                    )
+                    ax.plot(x_line, p(x_line), "r--", linewidth=1, alpha=0.7)
+
+            ax.set_xlabel(cov_name)
+            ax.set_ylabel(pname)
+            if i == 0:
+                ax.set_title(cov_name)
+
+    fig.suptitle("Individual Parameters vs Covariates", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def plot_randeff_vs_covariates(
+    saemix_object,
+    covariates=None,
+    use_map=True,
+    figsize=None,
+    alpha=None,
+):
+    """
+    Plot random effects (eta) versus covariate values.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object
+    covariates : list of str, optional
+        Covariate names to plot. If None, uses all available covariates.
+    use_map : bool
+        If True, use MAP estimates; otherwise use conditional mean estimates.
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    alpha : float, optional
+        Transparency for scatter points. If None, uses global plot options.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The random effects vs covariate plot
+
+    Notes
+    -----
+    For continuous covariates, displays scatter plots with trend lines.
+    For categorical covariates (<=6 unique values), displays box plots.
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize)
+    alpha = _get_alpha(alpha)
+
+    data = saemix_object.data
+    model = saemix_object.model
+    res = saemix_object.results
+
+    # Get random effects
+    if use_map:
+        eta = res.map_eta
+    else:
+        eta = res.cond_mean_eta
+
+    if eta is None:
+        raise ValueError(
+            "Random effects not available. "
+            "Run MAP estimation or conditional distribution estimation first."
+        )
+
+    if hasattr(eta, "values"):
+        eta = eta.values
+
+    n_subjects = eta.shape[0]
+    n_eta = eta.shape[1]
+
+    # Get parameter names for eta
+    param_names = model.name_modpar if hasattr(model, "name_modpar") else None
+    if param_names is None:
+        eta_names = [f"eta{i+1}" for i in range(n_eta)]
+    else:
+        # Only include parameters with random effects
+        indx_omega = model.indx_omega if hasattr(model, "indx_omega") else range(n_eta)
+        eta_names = [f"eta_{param_names[i]}" for i in indx_omega[:n_eta]]
+
+    # Get available covariates
+    available_covs = data.name_covariates if data.name_covariates else []
+    if not available_covs:
+        raise ValueError("No covariates available in the data.")
+
+    # Filter covariates
+    if covariates is not None:
+        cov_list = [c for c in covariates if c in available_covs]
+        if not cov_list:
+            raise ValueError(f"No valid covariates found. Available: {available_covs}")
+    else:
+        cov_list = available_covs
+
+    # Get covariate values per subject
+    df = data.data.copy()
+    cov_per_subject = df.groupby("index")[cov_list].first()
+
+    n_covs = len(cov_list)
+
+    fig, axes = plt.subplots(n_eta, n_covs, figsize=figsize, squeeze=False)
+
+    for i in range(n_eta):
+        for j, cov_name in enumerate(cov_list):
+            ax = axes[i][j]
+            cov_values = cov_per_subject[cov_name].values
+            eta_values = eta[:, i]
+
+            # Determine if categorical or continuous
+            unique_vals = np.unique(cov_values[~np.isnan(cov_values)])
+            is_categorical = len(unique_vals) <= 6
+
+            if is_categorical:
+                # Box plot for categorical
+                groups = []
+                labels = []
+                for val in sorted(unique_vals):
+                    mask = cov_values == val
+                    if np.any(mask):
+                        groups.append(eta_values[mask])
+                        labels.append(str(val))
+                if groups:
+                    bp = ax.boxplot(groups, labels=labels, patch_artist=True)
+                    for patch in bp["boxes"]:
+                        patch.set_facecolor("tab:green")
+                        patch.set_alpha(0.5)
+            else:
+                # Scatter plot for continuous
+                valid_mask = ~np.isnan(cov_values)
+                ax.scatter(
+                    cov_values[valid_mask],
+                    eta_values[valid_mask],
+                    alpha=alpha,
+                    edgecolor="none",
+                    color="tab:green",
+                )
+                # Add trend line
+                if np.sum(valid_mask) > 2:
+                    z = np.polyfit(cov_values[valid_mask], eta_values[valid_mask], 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(
+                        np.min(cov_values[valid_mask]),
+                        np.max(cov_values[valid_mask]),
+                        100,
+                    )
+                    ax.plot(x_line, p(x_line), "r--", linewidth=1, alpha=0.7)
+
+            # Add reference line at 0
+            ax.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+
+            ax.set_xlabel(cov_name)
+            ax.set_ylabel(eta_names[i])
+            if i == 0:
+                ax.set_title(cov_name)
+
+    fig.suptitle("Random Effects vs Covariates", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+# =============================================================================
+# Parameter Distribution Plots (Requirements 6.5, 6.6)
+# =============================================================================
+
+
+def plot_marginal_distribution(
+    saemix_object,
+    parameters=None,
+    use_map=True,
+    figsize=None,
+    bins=30,
+    show_density=True,
+):
+    """
+    Plot marginal distributions of individual parameter estimates.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object
+    parameters : list of str, optional
+        Parameter names to plot. If None, plots all parameters.
+    use_map : bool
+        If True, use MAP estimates; otherwise use conditional mean estimates.
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    bins : int
+        Number of histogram bins
+    show_density : bool
+        If True, overlay kernel density estimate
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The marginal distribution plot
+
+    Notes
+    -----
+    Displays histograms with optional kernel density estimates for each parameter.
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize)
+    from scipy.stats import gaussian_kde
+
+    model = saemix_object.model
+    res = saemix_object.results
+
+    # Get individual parameter estimates
+    if use_map:
+        phi = res.map_phi if res.map_phi is not None else res.map_psi
+    else:
+        phi = res.cond_mean_phi if res.cond_mean_phi is not None else res.cond_mean_psi
+
+    if phi is None:
+        raise ValueError(
+            "Individual parameter estimates not available. "
+            "Run MAP estimation or conditional distribution estimation first."
+        )
+
+    # Convert to numpy array if DataFrame
+    if hasattr(phi, "values"):
+        phi = phi.values
+
+    n_params = phi.shape[1]
+
+    # Get parameter names
+    param_names = model.name_modpar if hasattr(model, "name_modpar") else None
+    if param_names is None:
+        param_names = [f"theta{i+1}" for i in range(n_params)]
+
+    # Filter parameters
+    if parameters is not None:
+        param_indices = []
+        filtered_names = []
+        for p in parameters:
+            if isinstance(p, int):
+                if 0 <= p < n_params:
+                    param_indices.append(p)
+                    filtered_names.append(param_names[p])
+            elif p in param_names:
+                param_indices.append(param_names.index(p))
+                filtered_names.append(p)
+        if not param_indices:
+            raise ValueError(f"No valid parameters found. Available: {param_names}")
+        param_names = filtered_names
+    else:
+        param_indices = list(range(n_params))
+
+    n_plot = len(param_indices)
+    ncols = min(3, n_plot)
+    nrows = int(np.ceil(n_plot / ncols))
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=figsize, squeeze=False)
+
+    for idx, (param_idx, name) in enumerate(zip(param_indices, param_names)):
+        ax = axes[idx // ncols][idx % ncols]
+        values = phi[:, param_idx]
+
+        # Plot histogram
+        ax.hist(
+            values,
+            bins=bins,
+            density=True,
+            alpha=0.7,
+            color="tab:blue",
+            edgecolor="white",
+        )
+
+        # Overlay density estimate
+        if show_density and len(values) > 3:
+            try:
+                kde = gaussian_kde(values)
+                x_range = np.linspace(np.min(values), np.max(values), 200)
+                ax.plot(x_range, kde(x_range), color="red", linewidth=2, label="KDE")
+            except Exception:
+                pass  # Skip KDE if it fails
+
+        # Add population mean line
+        if res.fixed_effects is not None and param_idx < len(res.fixed_effects):
+            ax.axvline(
+                res.fixed_effects[param_idx],
+                color="black",
+                linestyle="--",
+                linewidth=1.5,
+                label=f"Pop. mean: {res.fixed_effects[param_idx]:.3g}",
+            )
+
+        ax.set_xlabel(name)
+        ax.set_ylabel("Density")
+        ax.set_title(f"Distribution: {name}")
+        ax.legend(fontsize=8)
+
+    # Hide unused subplots
+    for idx in range(n_plot, nrows * ncols):
+        axes[idx // ncols][idx % ncols].axis("off")
+
+    fig.suptitle("Marginal Parameter Distributions", y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def plot_correlations(
+    saemix_object,
+    use_map=True,
+    figsize=None,
+    cmap="RdBu_r",
+    annot=True,
+):
+    """
+    Plot correlation matrix of random effects.
+
+    Parameters
+    ----------
+    saemix_object : SaemixObject
+        Fitted SAEM object
+    use_map : bool
+        If True, use MAP estimates; otherwise use conditional mean estimates.
+    figsize : tuple, optional
+        Figure size (width, height). If None, uses global plot options.
+    cmap : str
+        Colormap for the correlation matrix
+    annot : bool
+        If True, annotate cells with correlation values
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The correlation matrix plot
+
+    Notes
+    -----
+    Displays a heatmap of correlations between random effects (eta).
+    """
+    plt = _require_matplotlib()
+    _apply_plot_options()
+    figsize = _get_figsize(figsize)
+
+    model = saemix_object.model
+    res = saemix_object.results
+
+    # Get random effects
+    if use_map:
+        eta = res.map_eta
+    else:
+        eta = res.cond_mean_eta
+
+    if eta is None:
+        raise ValueError(
+            "Random effects not available. "
+            "Run MAP estimation or conditional distribution estimation first."
+        )
+
+    if hasattr(eta, "values"):
+        eta = eta.values
+
+    n_eta = eta.shape[1]
+
+    if n_eta < 2:
+        raise ValueError("At least 2 random effects are required for correlation plot.")
+
+    # Get parameter names for eta
+    param_names = model.name_modpar if hasattr(model, "name_modpar") else None
+    if param_names is None:
+        eta_names = [f"eta{i+1}" for i in range(n_eta)]
+    else:
+        indx_omega = model.indx_omega if hasattr(model, "indx_omega") else range(n_eta)
+        eta_names = [f"eta_{param_names[i]}" for i in indx_omega[:n_eta]]
+
+    # Compute correlation matrix
+    corr_matrix = np.corrcoef(eta.T)
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Create heatmap
+    im = ax.imshow(corr_matrix, cmap=cmap, vmin=-1, vmax=1, aspect="auto")
+
+    # Add colorbar
+    cbar = fig.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label("Correlation")
+
+    # Set ticks and labels
+    ax.set_xticks(np.arange(n_eta))
+    ax.set_yticks(np.arange(n_eta))
+    ax.set_xticklabels(eta_names, rotation=45, ha="right")
+    ax.set_yticklabels(eta_names)
+
+    # Annotate with correlation values
+    if annot:
+        for i in range(n_eta):
+            for j in range(n_eta):
+                text_color = "white" if abs(corr_matrix[i, j]) > 0.5 else "black"
+                ax.text(
+                    j,
+                    i,
+                    f"{corr_matrix[i, j]:.2f}",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    fontsize=10,
+                )
+
+    ax.set_title("Random Effects Correlation Matrix")
+    fig.tight_layout()
+    return fig
