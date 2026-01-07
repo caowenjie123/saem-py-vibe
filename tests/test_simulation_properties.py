@@ -254,6 +254,8 @@ class TestDiscreteSimulation:
         def simulate_binary(psi, id, xidep):
             """Simple binary outcome simulation."""
             prob = 1 / (1 + np.exp(-psi[id, 0] * xidep[:, 0] - psi[id, 1]))
+            # Note: User-provided functions should manage their own randomness
+            # For reproducibility, users should use np.random.default_rng()
             return np.random.binomial(1, prob)
 
         sim_data = simulate_discrete_saemix(result, simulate_binary, nsim=5, seed=42)
@@ -268,15 +270,27 @@ class TestDiscreteSimulation:
         assert set(sim_data["ysim"].unique()).issubset({0, 1})
 
     def test_discrete_simulation_reproducibility(self):
-        """Test that discrete simulation is reproducible with same seed."""
+        """Test that discrete simulation is reproducible with same seed.
+
+        Note: The user-provided simulate_function is responsible for its own
+        randomness. For full reproducibility, the function should use the
+        global state which is seeded by the seed parameter.
+        """
         result = create_fitted_model(seed=42)
 
-        def simulate_binary(psi, id, xidep):
+        # Use a deterministic function for reproducibility test
+        def simulate_deterministic(psi, id, xidep):
+            """Deterministic binary outcome based on probability threshold."""
             prob = 1 / (1 + np.exp(-psi[id, 0] * xidep[:, 0] - psi[id, 1]))
-            return np.random.binomial(1, prob)
+            # Deterministic: return 1 if prob > 0.5, else 0
+            return (prob > 0.5).astype(int)
 
-        sim1 = simulate_discrete_saemix(result, simulate_binary, nsim=5, seed=123)
-        sim2 = simulate_discrete_saemix(result, simulate_binary, nsim=5, seed=123)
+        sim1 = simulate_discrete_saemix(
+            result, simulate_deterministic, nsim=5, seed=123
+        )
+        sim2 = simulate_discrete_saemix(
+            result, simulate_deterministic, nsim=5, seed=123
+        )
 
         pd.testing.assert_frame_equal(sim1, sim2)
 

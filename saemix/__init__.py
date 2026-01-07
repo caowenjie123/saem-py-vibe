@@ -41,121 +41,208 @@ get_plot_options : Get current plot options
 reset_plot_options : Reset to default options
 """
 
-from saemix._version import __version__, __version_info__
+import warnings
+
+# =============================================================================
+# Core Dependencies Check (Required)
+# =============================================================================
+# These dependencies are required for the package to function.
+# If any are missing, we raise an ImportError immediately with a clear message.
 
 try:
-    from saemix.data import SaemixData, saemix_data
-    from saemix.model import SaemixModel, saemix_model
-    from saemix.control import saemix_control
-    from saemix.results import SaemixObject, SaemixRes
-    from saemix.main import saemix
-    from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
-    from saemix.algorithm.conddist import conddist_saemix, compute_gelman_rubin
-    from saemix.compare import compare_saemix, aic, bic, loglik
-    from saemix.stepwise import (
-        forward_procedure,
-        backward_procedure,
-        stepwise_procedure,
-    )
-    from saemix.simulation import (
-        simulate_saemix,
-        simulate_discrete_saemix,
-        simulate_with_uncertainty,
-    )
-    from saemix.diagnostics import (
-        plot_observed_vs_pred,
-        plot_residuals,
-        plot_individual_fits,
-        simulate_observations,
-        compute_npde,
-        npde_tests,
-        plot_npde,
-        plot_vpc,
-        compute_residuals,
-        plot_gof,
-        plot_eta_distributions,
-        plot_convergence,
-        plot_likelihood,
-        plot_parameters_vs_covariates,
-        plot_randeff_vs_covariates,
-        plot_marginal_distribution,
-        plot_correlations,
-    )
-    from saemix.export import (
-        save_results,
-        export_to_csv,
-        save_plots,
-    )
-    from saemix.plot_options import (
-        PlotOptions,
-        set_plot_options,
-        get_plot_options,
-        reset_plot_options,
-        apply_plot_options,
-        merge_options,
-    )
+    import numpy as np
+except ImportError as e:
+    raise ImportError(
+        f"[saemix] Missing required dependency: numpy. "
+        f"Please install with: pip install numpy"
+    ) from e
 
-    __all__ = [
-        # Version info
-        "__version__",
-        "__version_info__",
-        # Core classes
-        "SaemixData",
-        "saemix_data",
-        "SaemixModel",
-        "saemix_model",
-        "saemix_control",
-        "SaemixObject",
-        "SaemixRes",
-        "saemix",
-        # Likelihood
-        "llis_saemix",
-        "llgq_saemix",
-        # Conditional distribution
-        "conddist_saemix",
-        "compute_gelman_rubin",
-        # Model comparison
-        "compare_saemix",
-        "aic",
-        "bic",
-        "loglik",
-        # Stepwise selection
-        "forward_procedure",
-        "backward_procedure",
-        "stepwise_procedure",
-        # Simulation
-        "simulate_saemix",
-        "simulate_discrete_saemix",
-        "simulate_with_uncertainty",
-        # Diagnostics
-        "plot_observed_vs_pred",
-        "plot_residuals",
-        "plot_individual_fits",
-        "simulate_observations",
-        "compute_npde",
-        "npde_tests",
-        "plot_npde",
-        "plot_vpc",
-        "compute_residuals",
-        "plot_gof",
-        "plot_eta_distributions",
-        "plot_convergence",
-        "plot_likelihood",
-        "plot_parameters_vs_covariates",
-        "plot_randeff_vs_covariates",
-        "plot_marginal_distribution",
-        "plot_correlations",
-        # Export
-        "save_results",
-        "export_to_csv",
-        "save_plots",
-        # Plot options
-        "PlotOptions",
-        "set_plot_options",
-        "get_plot_options",
-        "reset_plot_options",
-        "apply_plot_options",
-        "merge_options",
-    ]
+try:
+    import pandas as pd
+except ImportError as e:
+    raise ImportError(
+        f"[saemix] Missing required dependency: pandas. "
+        f"Please install with: pip install pandas"
+    ) from e
+
+try:
+    from scipy import stats
+except ImportError as e:
+    raise ImportError(
+        f"[saemix] Missing required dependency: scipy. "
+        f"Please install with: pip install scipy"
+    ) from e
+
+# =============================================================================
+# Optional Dependencies Check (Lazy)
+# =============================================================================
+# These dependencies are checked lazily when the functionality is accessed.
+# We track availability here but don't raise errors until the feature is used.
+
+_HAS_MATPLOTLIB = False
+try:
+    import matplotlib.pyplot as plt
+
+    _HAS_MATPLOTLIB = True
 except ImportError:
     pass
+
+
+def _require_matplotlib():
+    """
+    Check if matplotlib is available, raise ImportError if not.
+
+    This function should be called at the start of any function that
+    requires matplotlib for plotting functionality.
+
+    Returns
+    -------
+    module
+        The matplotlib.pyplot module if available.
+
+    Raises
+    ------
+    ImportError
+        If matplotlib is not installed, with a clear message on how to install it.
+
+    Examples
+    --------
+    >>> def my_plot_function():
+    ...     plt = _require_matplotlib()
+    ...     plt.figure()
+    ...     # ... plotting code ...
+    """
+    if not _HAS_MATPLOTLIB:
+        raise ImportError(
+            "[saemix] matplotlib is required for plotting functionality. "
+            "Install with: pip install matplotlib"
+        )
+    import matplotlib.pyplot as plt
+
+    return plt
+
+
+# =============================================================================
+# Version Information
+# =============================================================================
+from saemix._version import __version__, __version_info__
+
+# =============================================================================
+# Package Imports
+# =============================================================================
+from saemix.data import SaemixData, saemix_data
+from saemix.model import SaemixModel, saemix_model
+from saemix.control import saemix_control
+from saemix.results import SaemixObject, SaemixRes
+from saemix.main import saemix
+from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
+from saemix.algorithm.conddist import conddist_saemix, compute_gelman_rubin
+from saemix.compare import compare_saemix, aic, bic, loglik
+from saemix.stepwise import (
+    forward_procedure,
+    backward_procedure,
+    stepwise_procedure,
+)
+from saemix.simulation import (
+    simulate_saemix,
+    simulate_discrete_saemix,
+    simulate_with_uncertainty,
+)
+from saemix.diagnostics import (
+    plot_observed_vs_pred,
+    plot_residuals,
+    plot_individual_fits,
+    simulate_observations,
+    compute_npde,
+    npde_tests,
+    plot_npde,
+    plot_vpc,
+    compute_residuals,
+    plot_gof,
+    plot_eta_distributions,
+    plot_convergence,
+    plot_likelihood,
+    plot_parameters_vs_covariates,
+    plot_randeff_vs_covariates,
+    plot_marginal_distribution,
+    plot_correlations,
+)
+from saemix.export import (
+    save_results,
+    export_to_csv,
+    save_plots,
+)
+from saemix.plot_options import (
+    PlotOptions,
+    set_plot_options,
+    get_plot_options,
+    reset_plot_options,
+    apply_plot_options,
+    merge_options,
+)
+
+__all__ = [
+    # Version info
+    "__version__",
+    "__version_info__",
+    # Core classes
+    "SaemixData",
+    "saemix_data",
+    "SaemixModel",
+    "saemix_model",
+    "saemix_control",
+    "SaemixObject",
+    "SaemixRes",
+    "saemix",
+    # Likelihood
+    "llis_saemix",
+    "llgq_saemix",
+    # Conditional distribution
+    "conddist_saemix",
+    "compute_gelman_rubin",
+    # Model comparison
+    "compare_saemix",
+    "aic",
+    "bic",
+    "loglik",
+    # Stepwise selection
+    "forward_procedure",
+    "backward_procedure",
+    "stepwise_procedure",
+    # Simulation
+    "simulate_saemix",
+    "simulate_discrete_saemix",
+    "simulate_with_uncertainty",
+    # Diagnostics
+    "plot_observed_vs_pred",
+    "plot_residuals",
+    "plot_individual_fits",
+    "simulate_observations",
+    "compute_npde",
+    "npde_tests",
+    "plot_npde",
+    "plot_vpc",
+    "compute_residuals",
+    "plot_gof",
+    "plot_eta_distributions",
+    "plot_convergence",
+    "plot_likelihood",
+    "plot_parameters_vs_covariates",
+    "plot_randeff_vs_covariates",
+    "plot_marginal_distribution",
+    "plot_correlations",
+    # Export
+    "save_results",
+    "export_to_csv",
+    "save_plots",
+    # Plot options
+    "PlotOptions",
+    "set_plot_options",
+    "get_plot_options",
+    "reset_plot_options",
+    "apply_plot_options",
+    "merge_options",
+    # Dependency helpers
+    "_require_matplotlib",
+    "_HAS_MATPLOTLIB",
+]

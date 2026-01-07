@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyc
 
 # C extensions
 *.so
@@ -99,3 +101,43 @@ Thumbs.db
 results/
 plots/
 *.log
+
+# SAEM output files
+example_results/
+newdir/
+convergence_plot.png
+*.png
+*.pdf
+*.csv
+
+# Generated documentation
+docs/_build/
+docs/build/
+
+# R files (original saemix reference)
+*.Rhistory
+*.RData
+.Rproj.user/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Data files (exclude large datasets)
+data/*.tab
+data/*.csv
+data/*.txt
+!data/README.md
+
+# Notebook outputs
+*.ipynb_checkpoints/
+
+# Build artifacts
+*.whl
+*.tar.gz
+
+# Test outputs
+.tox/
+.coverage.*
+htmlcov/

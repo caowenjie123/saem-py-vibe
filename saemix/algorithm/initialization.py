@@ -172,7 +172,7 @@ def initialise_main_algo(saemix_data: SaemixData, saemix_model: SaemixModel, sae
     stepsize[:nbiter_sa] = 1.0
     alpha1_sa = saemix_options['alpha_sa']
     for k in range(nbiter_sa, nbiter_tot):
-        stepsize[k] = stepsize[k-1] * alpha1_sa
+        stepsize[k] = 1.0 / (k - nbiter_sa + 1)
     
     opt = {
         'stepsize_rw': saemix_options['stepsize_rw'],

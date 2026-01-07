@@ -31,7 +31,9 @@ class SaemixData:
         self.name_response = name_response
         self.name_X = name_X
         self.name_covariates = name_covariates if name_covariates else []
-        self.name_genetic_covariates = name_genetic_covariates if name_genetic_covariates else []
+        self.name_genetic_covariates = (
+            name_genetic_covariates if name_genetic_covariates else []
+        )
         self.name_mdv = name_mdv if name_mdv else ""
         self.name_cens = name_cens if name_cens else ""
         self.name_occ = name_occ if name_occ else ""
@@ -40,104 +42,140 @@ class SaemixData:
         self.verbose = verbose
         self.automatic = automatic
         self.yorig = None
-        
+
         self._load_data()
         self._validate_data()
         self._process_data()
-        
+
     def _load_data(self):
         if isinstance(self.name_data, pd.DataFrame):
             self.data = self.name_data.copy()
             self.name_data = "DataFrame"
         elif isinstance(self.name_data, str):
             if os.path.exists(self.name_data):
-                self.data = pd.read_csv(self.name_data, sep=None, engine='python')
+                self.data = pd.read_csv(self.name_data, sep=None, engine="python")
             else:
                 raise FileNotFoundError(f"Data file not found: {self.name_data}")
         else:
             raise TypeError("name_data must be a pandas DataFrame or file path string")
-    
+
     def _validate_data(self):
         missing_cols = []
-        
+
         if self.name_group not in self.data.columns:
             missing_cols.append(self.name_group)
-        
+
         for pred in self.name_predictors:
             if pred not in self.data.columns:
                 missing_cols.append(pred)
-        
+
         if self.name_response not in self.data.columns:
             missing_cols.append(self.name_response)
-        
+
         if missing_cols:
             raise ValueError(f"Missing columns in data: {missing_cols}")
-        
+
+        # 修复：使用列表推导式构造新列表，而不是在遍历时修改
         if self.name_covariates:
+            valid_covariates = []
+            ignored_covariates = []
+
             for cov in self.name_covariates:
-                if cov not in self.data.columns:
-                    if self.verbose:
-                        print(f"Warning: Covariate column '{cov}' not found, removing from list")
-                    self.name_covariates.remove(cov)
-    
+                if cov in self.data.columns:
+                    valid_covariates.append(cov)
+                else:
+                    ignored_covariates.append(cov)
+
+            if ignored_covariates:
+                if self.verbose:
+                    print(
+                        f"Warning: Covariate columns not found, ignoring: {ignored_covariates}"
+                    )
+
+            if not valid_covariates and self.verbose:
+                print("Warning: No valid covariates found, covariate list is empty")
+
+            if self.verbose and valid_covariates:
+                print(f"Valid covariates found: {valid_covariates}")
+
+            self.name_covariates = valid_covariates
+
     def _process_data(self):
+        """处理数据，修复辅助列映射问题"""
+        # 构建需要保留的列列表
         all_cols = [self.name_group] + self.name_predictors + [self.name_response]
         if self.name_covariates:
             all_cols.extend(self.name_covariates)
-        
+
+        # 新增：构建辅助列映射并验证列存在性
+        auxiliary_mapping = {
+            "mdv": self.name_mdv,
+            "cens": self.name_cens,
+            "occ": self.name_occ,
+            "ytype": self.name_ytype,
+        }
+
+        auxiliary_cols = []
+        for internal_name, user_col in auxiliary_mapping.items():
+            if user_col:  # 用户指定了列名
+                if user_col in self.data.columns:
+                    if user_col not in all_cols:
+                        auxiliary_cols.append(user_col)
+                    if self.verbose:
+                        print(f"Using column '{user_col}' for {internal_name}")
+                else:
+                    raise ValueError(
+                        f"[SaemixData] Specified {internal_name} column '{user_col}' not found in data. "
+                        f"Context: available_columns={list(self.data.columns)[:10]}... "
+                        f"Suggestion: Check column name spelling or use name_{internal_name}=None for default."
+                    )
+            elif self.verbose:
+                print(f"Using default values for {internal_name}")
+
+        # 保留所有需要的列（包括辅助列）
+        all_cols.extend(auxiliary_cols)
         self.data = self.data[all_cols].copy()
-        
+
         self.data = self.data.sort_values([self.name_group, self.name_predictors[0]])
-        
+
         unique_ids = self.data[self.name_group].unique()
         self.n_subjects = len(unique_ids)
-        
+
         id_map = {orig_id: idx for idx, orig_id in enumerate(unique_ids)}
-        self.data['index'] = self.data[self.name_group].map(id_map)
-        
+        self.data["index"] = self.data[self.name_group].map(id_map)
+
+        # 处理辅助列：使用原始列名映射到内部列名
         if self.name_mdv:
-            if self.name_mdv in self.data.columns:
-                self.data['mdv'] = self.data[self.name_mdv]
-            else:
-                self.data['mdv'] = 0
+            self.data["mdv"] = self.data[self.name_mdv]
         else:
-            self.data['mdv'] = self.data[self.name_response].isna().astype(int)
-        
+            self.data["mdv"] = self.data[self.name_response].isna().astype(int)
+
         if self.name_cens:
-            if self.name_cens in self.data.columns:
-                self.data['cens'] = self.data[self.name_cens]
-            else:
-                self.data['cens'] = 0
+            self.data["cens"] = self.data[self.name_cens]
         else:
-            self.data['cens'] = 0
-        
+            self.data["cens"] = 0
+
         if self.name_occ:
-            if self.name_occ in self.data.columns:
-                self.data['occ'] = self.data[self.name_occ]
-            else:
-                self.data['occ'] = 1
+            self.data["occ"] = self.data[self.name_occ]
         else:
-            self.data['occ'] = 1
-        
+            self.data["occ"] = 1
+
         if self.name_ytype:
-            if self.name_ytype in self.data.columns:
-                self.data['ytype'] = self.data[self.name_ytype]
-            else:
-                self.data['ytype'] = 1
+            self.data["ytype"] = self.data[self.name_ytype]
         else:
-            self.data['ytype'] = 1
-        
-        self.n_ind_obs = self.data.groupby('index').size().values
-        
-        valid_rows = self.data['mdv'] == 0
+            self.data["ytype"] = 1
+
+        self.n_ind_obs = self.data.groupby("index").size().values
+
+        valid_rows = self.data["mdv"] == 0
         self.data = self.data[valid_rows].copy()
-        self.n_ind_obs = self.data.groupby('index').size().values
-        
+        self.n_ind_obs = self.data.groupby("index").size().values
+
         self.n_total_obs = len(self.data)
-        
+
         if not self.name_X:
             self.name_X = self.name_predictors[0]
-        
+
         if self.name_covariates:
             self.ocov = self.data[self.name_covariates].copy()
             for cov in self.name_covariates:
@@ -146,10 +184,10 @@ class SaemixData:
                     self.data[cov] = pd.Categorical(self.data[cov]).codes
         else:
             self.ocov = pd.DataFrame()
-        
+
         if self.n_subjects < 2 and self.verbose:
             print(f"Warning: Only {self.n_subjects} subject(s) in dataset")
-    
+
     def __repr__(self):
         return f"SaemixData object:\n  Subjects: {self.n_subjects}\n  Total observations: {self.n_total_obs}\n  Predictors: {self.name_predictors}\n  Response: {self.name_response}"
 

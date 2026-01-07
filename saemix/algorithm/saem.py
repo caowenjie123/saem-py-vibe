@@ -1,10 +1,35 @@
 import numpy as np
+from typing import Optional
 from saemix.algorithm.estep import estep
 from saemix.algorithm.mstep import mstep
 from saemix.utils import transphi
 
 
-def run_saem(Dargs, Uargs, varList, opt, mean_phi, phiM, structural_model):
+def run_saem(
+    Dargs,
+    Uargs,
+    varList,
+    opt,
+    mean_phi,
+    phiM,
+    structural_model,
+    rng: Optional[np.random.Generator] = None,
+):
+    """
+    Run the SAEM algorithm.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator, optional
+        Random number generator for reproducibility. If None, uses opt['rng'] if available,
+        otherwise creates a new default RNG.
+    """
+    # Get RNG from opt if not provided directly
+    if rng is None:
+        rng = opt.get("rng", None)
+    if rng is None:
+        rng = np.random.default_rng()
+
     nbiter_tot = opt["nbiter_saemix"][0] + opt["nbiter_saemix"][1]
 
     if phiM is None:
@@ -30,7 +55,7 @@ def run_saem(Dargs, Uargs, varList, opt, mean_phi, phiM, structural_model):
     allpar = np.zeros((nbiter_tot, n_total_params))
 
     for kiter in range(1, nbiter_tot + 1):
-        xmcmc = estep(kiter, Uargs, Dargs, opt, mean_phi, varList, phiM)
+        xmcmc = estep(kiter, Uargs, Dargs, opt, mean_phi, varList, phiM, rng=rng)
         varList = xmcmc["varList"]
         phiM = xmcmc["phiM"]
 

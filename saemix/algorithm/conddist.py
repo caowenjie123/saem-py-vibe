@@ -23,6 +23,7 @@ def conddist_saemix(
     nchains: int = 1,
     plot: bool = False,
     seed: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
 ) -> "SaemixObject":
     """
     Estimate the conditional distribution of individual parameters using MCMC.
@@ -44,7 +45,9 @@ def conddist_saemix(
     plot : bool
         Whether to display convergence diagnostic plots (default: False)
     seed : int, optional
-        Random seed for reproducibility
+        Random seed for reproducibility (deprecated, use rng instead)
+    rng : numpy.random.Generator, optional
+        Random number generator for reproducibility. Priority: rng > seed > saemix_object.control.rng
 
     Returns
     -------
@@ -75,9 +78,17 @@ def conddist_saemix(
     if max_iter < nsamp:
         raise ValueError("max_iter must be >= nsamp")
 
-    # Set random seed if provided
-    if seed is not None:
-        np.random.seed(seed)
+    # Determine RNG to use - priority: rng > seed > saemix_object.control.rng > new default
+    if rng is not None:
+        _rng = rng
+    elif seed is not None:
+        _rng = np.random.default_rng(seed)
+    elif hasattr(saemix_object, "control") and saemix_object.control is not None:
+        _rng = saemix_object.control.get("rng", None)
+        if _rng is None:
+            _rng = np.random.default_rng()
+    else:
+        _rng = np.random.default_rng()
 
     # Extract necessary components
     model = saemix_object.model
@@ -156,7 +167,7 @@ def conddist_saemix(
             else:
                 phi_i = phi_current[i, :].copy()
                 if nb_etas > 0:
-                    phi_i[ind_eta] += np.random.randn(nb_etas) @ chol_omega.T * 0.1
+                    phi_i[ind_eta] += _rng.standard_normal(nb_etas) @ chol_omega.T * 0.1
 
             # Compute initial log-posterior
             log_post = _compute_log_posterior(
@@ -175,7 +186,7 @@ def conddist_saemix(
                     # Propose new phi
                     phi_prop = phi_i.copy()
                     eta_current = phi_i[ind_eta] - mean_phi_i[ind_eta]
-                    eta_prop = eta_current + np.random.randn(
+                    eta_prop = eta_current + _rng.standard_normal(
                         nb_etas
                     ) * proposal_scale * np.sqrt(np.diag(omega_eta))
                     phi_prop[ind_eta] = mean_phi_i[ind_eta] + eta_prop
@@ -197,7 +208,7 @@ def conddist_saemix(
                     # Metropolis-Hastings acceptance
                     log_alpha = log_post_prop - log_post
 
-                    if np.log(np.random.rand()) < log_alpha:
+                    if np.log(_rng.random()) < log_alpha:
                         phi_i = phi_prop
                         log_post = log_post_prop
                         n_accepted += 1

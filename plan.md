@@ -1,349 +1,148 @@
-# Python saemix 开发计划
-
-本文档详细描述 R 版本 saemix-main 与 Python 版本 saemix 之间的功能差异，以及 Python 版本尚未实现的功能。
-
-## 1. 功能对比总览
-
-| 功能模块 | R 版本 | Python 版本 | 状态 |
-|---------|--------|-------------|------|
-| 核心 SAEM 算法 | ✅ | ✅ | 已实现 |
-| 数据管理 (SaemixData) | ✅ | ✅ | 已实现 |
-| 模型定义 (SaemixModel) | ✅ | ✅ | 已实现 |
-| 结果对象 (SaemixObject/SaemixRes) | ✅ | ⚠️ | 部分实现 |
-| MAP 估计 | ✅ | ✅ | 已实现 |
-| Fisher 信息矩阵 | ✅ | ✅ | 已实现 |
-| 似然计算 (IS/GQ/Lin) | ✅ | ⚠️ | 部分实现 |
-| 条件分布估计 | ✅ | ❌ | 未实现 |
-| 模型比较 (AIC/BIC) | ✅ | ❌ | 未实现 |
-| 逐步回归 (Stepwise) | ✅ | ❌ | 未实现 |
-| 模拟功能 | ✅ | ⚠️ | 部分实现 |
-| NPDE 计算 | ✅ | ✅ | 已实现 |
-| VPC 图 | ✅ | ✅ | 已实现 |
-| 诊断图 | ✅ | ⚠️ | 部分实现 |
-| 结果保存/导出 | ✅ | ❌ | 未实现 |
-
-## 2. 详细功能差异
-
-### 2.1 已实现功能
-
-#### 核心算法 (saemix/algorithm/)
-- ✅ SAEM 主算法 (`saem.py`)
-- ✅ E 步 (`estep.py`)
-- ✅ M 步 (`mstep.py`)
-- ✅ 初始化 (`initialization.py`)
-- ✅ MAP 估计 (`map_estimation.py`)
-- ✅ Fisher 信息矩阵 (`fim.py`)
-- ✅ 似然计算 (`likelihood.py`)
-- ✅ 预测 (`predict.py`)
-
-#### 数据管理 (saemix/data.py)
-- ✅ 数据加载 (DataFrame/文件)
-- ✅ 列名验证
-- ✅ 个体 ID 映射
-- ✅ 缺失数据处理 (mdv)
-- ✅ 删失数据处理 (cens)
-- ✅ 多响应类型 (ytype)
-- ✅ 协变量处理
-
-#### 模型定义 (saemix/model.py)
-- ✅ 结构模型
-- ✅ 似然模型
-- ✅ 误差模型 (constant/proportional/combined/exponential)
-- ✅ 参数变换 (normal/log-normal/probit/logit)
-- ✅ 协变量模型
-- ✅ 协方差模型
-
-#### 诊断功能 (saemix/diagnostics.py)
-- ✅ 观测值 vs 预测值图
-- ✅ 残差图
-- ✅ 个体拟合图
-- ✅ GOF 综合图
-- ✅ NPDE 计算和图
-- ✅ VPC 图
-- ✅ 随机效应分布图
-
-### 2.2 部分实现功能
-
-#### 结果对象 (saemix/results.py)
-Python 版本的 `SaemixRes` 相比 R 版本缺少以下属性：
-- ❌ `conf.int` - 置信区间 DataFrame
-- ❌ `parpop` - 每次迭代的总体参数
-- ❌ `allpar` - 每次迭代的所有参数
-- ❌ `predictions` - 预测值 DataFrame
-- ❌ `ires` - 个体残差
-- ❌ `wres` - 总体加权残差
-- ❌ `pd` - 预测偏差
-
-#### 似然计算
-- ✅ 重要性采样 (IS)
-- ✅ 高斯积分 (GQ)
-- ❌ 线性化方法 (Lin) - R 版本在 FIM 计算时同时计算
-
-#### 诊断图
-R 版本提供更丰富的图形选项：
-- ❌ 收敛图 (`saemix.plot.convergence`)
-- ❌ 似然估计图 (`saemix.plot.llis`)
-- ❌ 参数 vs 协变量图 (`saemix.plot.parcov`)
-- ❌ 随机效应 vs 协变量图 (`saemix.plot.randeffcov`)
-- ❌ 参数边际分布图 (`saemix.plot.distpsi`)
-- ❌ 随机效应相关性图 (`saemix.plot.correlations`)
-- ❌ Mirror 图 (`saemix.plot.mirror`)
-
-### 2.3 未实现功能
-
-#### 条件分布估计 (`func_distcond.R` → `conddist.saemix`)
-R 版本提供完整的条件分布估计功能：
-- 使用 MCMC 算法估计个体参数的条件均值和方差
-- 支持多链采样
-- 收敛诊断
-- 条件收缩估计
-
-**优先级：高**
-
-#### 模型比较 (`func_compare.R` → `compare.saemix`)
-R 版本支持多模型比较：
-- AIC 比较
-- BIC 比较
-- BIC.cov (协变量选择专用 BIC)
-- 支持不同似然计算方法
-
-**优先级：高**
-
-#### 逐步回归 (`func_stepwise.R`, `forward.R`, `backward.R`, `stepwise.R`)
-R 版本提供完整的逐步回归功能：
-- 前向选择 (`forward.procedure`)
-- 后向消除 (`backward.procedure`)
-- 双向逐步 (`stepwise.procedure`)
-- 基于 BIC 的协变量和随机效应联合选择
-
-**优先级：中**
-
-#### 模拟功能 (`func_simulations.R`)
-R 版本提供更完整的模拟功能：
-- `simulate.SaemixObject` - 从拟合模型模拟
-- `simulateDiscreteSaemix` - 离散响应模型模拟
-- 支持不确定性传播
-
-**优先级：中**
-
-#### 结果保存/导出
-R 版本支持：
-- 结果保存到文件
-- 图形保存
-- 输出目录管理
-
-**优先级：低**
-
-#### 图形选项系统 (`func_plots.R`)
-R 版本有完整的图形选项系统：
-- `saemix.plot.setoptions` - 设置默认选项
-- `replace.plot.options` - 替换选项
-- 丰富的自定义参数
-
-**优先级：低**
-
-## 3. 开发计划
-
-### Phase 1: 核心功能完善 (高优先级)
-
-#### 1.1 条件分布估计
-**文件**: `saemix/algorithm/conddist.py`
-
-```python
-def conddist_saemix(saemix_object, nsamp=1, max_iter=None, plot=False):
-    """
-    使用 MCMC 算法估计个体参数的条件均值和方差
-    
-    参数
-    -----
-    saemix_object : SaemixObject
-        拟合结果对象
-    nsamp : int
-        采样数量
-    max_iter : int
-        最大迭代次数
-    plot : bool
-        是否显示收敛图
-    
-    返回
-    -----
-    SaemixObject
-        更新后的结果对象，包含：
-        - cond_mean_phi: 条件均值
-        - cond_var_phi: 条件方差
-        - cond_shrinkage: 收缩估计
-        - phi_samp: 采样结果
-    """
-```
-
-**工作量估计**: 3-5 天
-
-#### 1.2 模型比较
-**文件**: `saemix/compare.py`
-
-```python
-def compare_saemix(*models, method='is'):
-    """
-    使用信息准则比较多个模型
-    
-    参数
-    -----
-    *models : SaemixObject
-        多个拟合结果对象
-    method : str
-        似然计算方法 ('is', 'lin', 'gq')
-    
-    返回
-    -----
-    DataFrame
-        包含 AIC, BIC, BIC.cov 的比较表
-    """
-```
-
-**工作量估计**: 1-2 天
-
-#### 1.3 完善结果对象
-**文件**: `saemix/results.py`
-
-需要添加：
-- 置信区间计算
-- 迭代历史记录
-- 预测值 DataFrame
-- 残差计算
-
-**工作量估计**: 2-3 天
-
-### Phase 2: 模型选择功能 (中优先级)
-
-#### 2.1 逐步回归
-**文件**: `saemix/stepwise.py`
-
-```python
-def step_saemix(saemix_object, direction='forward', trace=True):
-    """
-    逐步回归进行协变量和随机效应选择
-    
-    参数
-    -----
-    saemix_object : SaemixObject
-        初始拟合结果
-    direction : str
-        'forward', 'backward', 'both'
-    trace : bool
-        是否打印过程
-    
-    返回
-    -----
-    SaemixObject
-        最优模型的拟合结果
-    """
-
-def forward_procedure(saemix_object, trace=True):
-    """前向选择"""
-
-def backward_procedure(saemix_object, trace=True):
-    """后向消除"""
-
-def stepwise_procedure(saemix_object, covariate_init=None, trace=True):
-    """双向逐步"""
-```
-
-**工作量估计**: 5-7 天
-
-#### 2.2 完善模拟功能
-**文件**: `saemix/simulation.py`
-
-```python
-def simulate_saemix(saemix_object, nsim=1000, seed=None, 
-                    predictions=True, res_var=True):
-    """
-    从拟合模型模拟数据
-    """
-
-def simulate_discrete_saemix(saemix_object, simulate_function, 
-                             nsim=1000, seed=None):
-    """
-    离散响应模型模拟
-    """
-```
-
-**工作量估计**: 2-3 天
-
-### Phase 3: 诊断功能增强 (中优先级)
-
-#### 3.1 收敛诊断图
-```python
-def plot_convergence(saemix_object):
-    """绘制参数收敛图"""
-
-def plot_likelihood(saemix_object):
-    """绘制似然估计图"""
-```
-
-#### 3.2 参数-协变量关系图
-```python
-def plot_parameters_vs_covariates(saemix_object):
-    """参数 vs 协变量散点图/箱线图"""
-
-def plot_randeff_vs_covariates(saemix_object):
-    """随机效应 vs 协变量图"""
-```
-
-#### 3.3 参数分布图
-```python
-def plot_marginal_distribution(saemix_object):
-    """参数边际分布图"""
-
-def plot_correlations(saemix_object):
-    """随机效应相关性图"""
-```
-
-**工作量估计**: 3-4 天
-
-### Phase 4: 辅助功能 (低优先级)
-
-#### 4.1 结果保存/导出
-```python
-def save_results(saemix_object, directory='results'):
-    """保存结果到文件"""
-
-def export_to_csv(saemix_object, filename):
-    """导出结果为 CSV"""
-```
-
-#### 4.2 图形选项系统
-```python
-class PlotOptions:
-    """图形选项管理类"""
-    
-def set_plot_options(**kwargs):
-    """设置全局图形选项"""
-```
-
-**工作量估计**: 2-3 天
-
-## 4. 时间线估计
-
-| 阶段 | 功能 | 预计时间 | 累计时间 |
-|------|------|----------|----------|
-| Phase 1.1 | 条件分布估计 | 3-5 天 | 3-5 天 |
-| Phase 1.2 | 模型比较 | 1-2 天 | 4-7 天 |
-| Phase 1.3 | 完善结果对象 | 2-3 天 | 6-10 天 |
-| Phase 2.1 | 逐步回归 | 5-7 天 | 11-17 天 |
-| Phase 2.2 | 完善模拟功能 | 2-3 天 | 13-20 天 |
-| Phase 3 | 诊断功能增强 | 3-4 天 | 16-24 天 |
-| Phase 4 | 辅助功能 | 2-3 天 | 18-27 天 |
-
-**总计**: 约 3-4 周
-
-## 5. 测试计划
-
-每个新功能需要：
-1. 单元测试
-2. 与 R 版本结果对比验证
-3. 使用 `saemix-main/data/` 中的示例数据测试
-
-### 测试数据集
+# SAEMIX Python 优化计划（Roadmap）
+
+本文档基于当前代码审阅与使用体验，给出面向「正确性与鲁棒性、可复现性、数值稳定性、工程化质量、性能与用户体验」的优化路线。
+
+默认原则：
+- 尽量不破坏现有 API；如必须调整，需提供清晰的迁移方案与版本策略。
+- 所有可能影响拟合结果/随机性的改动都必须配套回归测试。
+
+## 1. 目标与范围
+
+### 1.1 目标（本计划要交付什么）
+
+- 正确性：修复已识别的数据处理与边界条件问题，避免“静默失败”。
+- 可复现性：统一随机数管理，使同一 `seed` 在同一环境下结果稳定可复现。
+- 数值稳定性：对 `log/logit` 等变换与关键计算路径增加防护与更明确的错误信息。
+- 工程化质量：引入 CI（自动测试/构建验证），并补齐关键单元测试与回归测试。
+- 性能与体验：在不大改架构的前提下，基于 profiling 做热点优化；补齐常见的 `predict(newdata=...)` 能力。
+
+### 1.2 非目标（本阶段刻意不做）
+
+- 不做大规模重写（例如全面替换算法实现、迁移到新的推断框架）。
+- 不追求与 R 版本“逐字段完全一致”，优先保证统计正确性与工程鲁棒性。
+
+## 2. 现状要点与已识别风险
+
+### 2.1 现状概览
+
+- 核心 SAEM 主流程、E/M 步、MAP、FIM、似然估计、条件分布、模型比较、逐步选择、模拟、诊断、导出等模块已具备基础实现。
+- 测试目录已存在，但缺少持续集成（CI）与更系统的边界/回归用例。
+
+### 2.2 已识别的高风险点（优先处理）
+
+- `SaemixData` 在数据裁剪时可能丢弃 `mdv/cens/occ/ytype` 对应原始列，导致用户传入这些列名后实际不生效（静默回退到默认值）。
+- `SaemixData` 校验协变量时存在“遍历列表时 remove”的潜在逻辑缺陷。
+- 随机数使用分散且部分模块可能设置全局 `np.random.seed()`，会污染用户全局随机状态，并导致复现困难。
+- 参数变换（`log/logit` 等）与关键路径缺少 `nan/inf` 防护与更明确的报错。
+
+## 3. 里程碑（按优先级分组）
+
+### P0（建议 1-2 周）：正确性 + 可复现性 + CI
+
+#### M0.1 修复 SaemixData 辅助列处理与协变量校验
+
+- 交付
+  - 支持 `mdv/cens/occ/ytype` 对应列名在裁剪后仍能正确映射。
+  - 协变量缺失时的处理改为“构造新列表过滤”，避免跳过元素。
+  - 在 `verbose=True` 时输出明确提示：哪些列被使用/忽略、默认值是否被触发。
+- 验收
+  - 构造包含 `mdv/cens/occ/ytype` 的最小数据集，确认这些列在内部被正确使用。
+  - 对缺失 covariate 的场景，过滤行为稳定且可预测。
+- 测试
+  - 新增 2-3 个单元测试覆盖上述场景。
+
+#### M0.2 统一随机数管理（rng 贯穿）
+
+- 交付
+  - 用 `numpy.random.Generator` 替代隐式全局随机数；在 `saemix_control`/`saemix()` 层提供统一入口（例如 `seed` → `rng`）。
+  - `simulation`/`conddist` 等模块不再调用全局 `np.random.seed()`。
+- 验收
+  - 相同输入与相同 `seed` 下：两次运行关键输出一致（或在定义的容差范围内一致）。
+  - 不影响外部调用者的全局随机状态（可通过简单测试验证）。
+
+#### M0.3 引入 CI（pytest + build 校验）
+
+- 交付
+  - 添加 GitHub Actions（或等价 CI）
+    - 在声明支持的 Python 版本范围内运行 `pytest`。
+    - 运行 `python -m build`（或等价命令）验证打包可用。
+- 验收
+  - CI 在主分支稳定绿灯；PR 自动触发。
+
+### P1（建议 2-4 周）：数值稳定 + API 一致性 + 回归测试体系
+
+#### M1.1 参数变换与关键计算路径的数值防护
+
+- 交付
+  - `log/logit` 等变换增加 `clip/eps` 防护，避免 `inf/nan`。
+  - 对关键矩阵运算加入更明确的异常信息（指示输入范围/可能原因）。
+- 验收
+  - 典型极端输入下不再静默产生 `nan/inf`；错误信息可定位。
+
+#### M1.2 API 一致性与错误暴露
+
+- 交付
+  - 避免在包初始化时吞掉重要 `ImportError`（对可选依赖做局部降级）。
+  - 统一 `ytype` 归一化逻辑，消除重复实现导致的行为漂移风险。
+  - 评估并设计“用户友好”的 `id` 处理方式（如提供 helper，将内部 0-based 映射透明化）。
+- 验收
+  - 当可选依赖缺失时：只禁用相关功能，但报错清晰可理解。
+
+#### M1.3 建立 R 对齐回归测试集（可选但强烈建议）
+
+- 交付
+  - 选择 1-2 个经典数据/模型组合（例如 theo），固定控制参数与 seed。
+  - 把关键输出（固定效应、随机效应协方差、残差模型参数、LL/信息准则等）做“允许误差范围”的回归断言。
+- 验收
+  - 关键指标在未来改动下可被自动检测出回归。
+
+### P2（建议 4+ 周）：性能与用户体验增强
+
+#### M2.1 Profiling 驱动的热点优化
+
+- 交付
+  - 对 E-step/MCMC、模型预测、LL 估计路径做 profiling，形成热点清单。
+  - 优先用向量化/缓存减少重复计算；必要时评估 `numba`。
+- 验收
+  - 在代表性用例上运行时间下降（给出可重复的 benchmark 脚本与结果）。
+
+#### M2.2 支持 `predict(newdata=...)`
+
+- 交付
+  - 为拟合后对新数据预测提供一条清晰路径（最小实现优先）。
+- 验收
+  - 提供最小示例 + 测试覆盖。
+
+#### M2.3 并行与可扩展性（按需）
+
+- 方向
+  - 多链 MCMC、模拟、似然估计的并行化（优先可控、可复现的方案）。
+
+## 4. 建议 PR 切分（降低风险，便于审查）
+
+- PR-01：`SaemixData` 辅助列处理修复 + 单元测试。
+- PR-02：RNG 统一（引入 `rng`）+ 可复现性测试。
+- PR-03：CI 工作流（pytest + build）+ 基础质量门槛。
+- PR-04：数值稳定性改进（变换/关键路径防护）+ 回归用例。
+- PR-05：API 一致性（错误暴露、ytype 去重、id helper 设计）+ 文档补充。
+- PR-06：性能 profiling 报告 + 第一轮热点优化。
+
+## 5. 测试与 CI 计划（Definition of Done）
+
+每个 PR 至少满足：
+- 新增/修改逻辑必须有对应测试（单元或集成）。
+- `pytest` 全绿；核心示例可运行。
+- 若涉及随机性：提供固定 `seed` 的回归断言。
+- 若涉及结果变化：在 PR 描述中说明“预期变化是什么、为什么合理”。
+
+推荐的测试分层：
+- 单元测试：数据处理、参数变换、边界条件。
+- 集成测试：端到端拟合（小数据、短迭代）。
+- 回归测试：固定模型+seed 的关键指标锁定。
+-（可选）基准测试：记录关键用例的运行时间。
+
+### 测试数据集（用于回归/对齐）
+
 - `theo.saemix.tab` - 茶碱 PK 数据
 - `cow.saemix.tab` - 奶牛生长数据
 - `PD1.saemix.tab` - PD 数据

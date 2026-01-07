@@ -22,6 +22,7 @@ def simulate_saemix(
     saemix_object: SaemixObject,
     nsim: int = 1000,
     seed: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
     predictions: bool = True,
     res_var: bool = True,
 ) -> pd.DataFrame:
@@ -38,7 +39,9 @@ def simulate_saemix(
     nsim : int
         Number of simulation replicates (default: 1000)
     seed : int, optional
-        Random seed for reproducibility
+        Random seed for reproducibility (deprecated, use rng instead)
+    rng : numpy.random.Generator, optional
+        Random number generator for reproducibility. Priority: rng > seed > saemix_object.control.rng
     predictions : bool
         If True, include population and individual predictions in output
     res_var : bool
@@ -82,9 +85,17 @@ def simulate_saemix(
     if saemix_object.results.mean_phi is None:
         raise ValueError("SaemixObject has not been fitted. Run saemix() first.")
 
-    # Set random seed
-    if seed is not None:
-        np.random.seed(seed)
+    # Determine RNG to use - priority: rng > seed > saemix_object.control.rng > new default
+    if rng is not None:
+        _rng = rng
+    elif seed is not None:
+        _rng = np.random.default_rng(seed)
+    elif hasattr(saemix_object, "control") and saemix_object.control is not None:
+        _rng = saemix_object.control.get("rng", None)
+        if _rng is None:
+            _rng = np.random.default_rng()
+    else:
+        _rng = np.random.default_rng()
 
     # Extract model components
     model = saemix_object.model
@@ -125,12 +136,12 @@ def simulate_saemix(
         if len(ind_eta) > 0:
             omega_sub = omega[np.ix_(ind_eta, ind_eta)]
             try:
-                eta = np.random.multivariate_normal(
+                eta = _rng.multivariate_normal(
                     np.zeros(len(ind_eta)), omega_sub, size=n_subjects
                 )
             except np.linalg.LinAlgError:
                 # If omega is singular, use diagonal
-                eta = np.random.normal(
+                eta = _rng.normal(
                     0, np.sqrt(np.diag(omega_sub)), size=(n_subjects, len(ind_eta))
                 )
         else:
@@ -157,7 +168,7 @@ def simulate_saemix(
         if res_var and model.modeltype == "structural":
             ytype = data.data["ytype"].values if "ytype" in data.data.columns else None
             g = error_function(f, respar, model.error_model, ytype)
-            epsilon = np.random.normal(0, 1, n_obs)
+            epsilon = _rng.standard_normal(n_obs)
             ysim = f + g * epsilon
         else:
             ysim = f.copy()
@@ -187,6 +198,7 @@ def simulate_discrete_saemix(
     simulate_function: Callable,
     nsim: int = 1000,
     seed: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
 ) -> pd.DataFrame:
     """
     Simulate discrete response data from a fitted SAEM model.
@@ -207,7 +219,9 @@ def simulate_discrete_saemix(
     nsim : int
         Number of simulation replicates (default: 1000)
     seed : int, optional
-        Random seed for reproducibility
+        Random seed for reproducibility (deprecated, use rng instead)
+    rng : numpy.random.Generator, optional
+        Random number generator for reproducibility. Priority: rng > seed > saemix_object.control.rng
 
     Returns
     -------
@@ -233,9 +247,9 @@ def simulate_discrete_saemix(
 
     Examples
     --------
-    >>> def simulate_binary(psi, id, xidep):
+    >>> def simulate_binary(psi, id, xidep, rng):
     ...     prob = 1 / (1 + np.exp(-psi[id, 0] * xidep[:, 0] - psi[id, 1]))
-    ...     return np.random.binomial(1, prob)
+    ...     return rng.binomial(1, prob)
     >>>
     >>> result = saemix(model, data, control)
     >>> sim_data = simulate_discrete_saemix(result, simulate_binary, nsim=100)
@@ -250,9 +264,17 @@ def simulate_discrete_saemix(
     if not callable(simulate_function):
         raise ValueError("simulate_function must be callable")
 
-    # Set random seed
-    if seed is not None:
-        np.random.seed(seed)
+    # Determine RNG to use - priority: rng > seed > saemix_object.control.rng > new default
+    if rng is not None:
+        _rng = rng
+    elif seed is not None:
+        _rng = np.random.default_rng(seed)
+    elif hasattr(saemix_object, "control") and saemix_object.control is not None:
+        _rng = saemix_object.control.get("rng", None)
+        if _rng is None:
+            _rng = np.random.default_rng()
+    else:
+        _rng = np.random.default_rng()
 
     # Extract model components
     model = saemix_object.model
@@ -289,11 +311,11 @@ def simulate_discrete_saemix(
         if len(ind_eta) > 0:
             omega_sub = omega[np.ix_(ind_eta, ind_eta)]
             try:
-                eta = np.random.multivariate_normal(
+                eta = _rng.multivariate_normal(
                     np.zeros(len(ind_eta)), omega_sub, size=n_subjects
                 )
             except np.linalg.LinAlgError:
-                eta = np.random.normal(
+                eta = _rng.normal(
                     0, np.sqrt(np.diag(omega_sub)), size=(n_subjects, len(ind_eta))
                 )
         else:
@@ -330,6 +352,7 @@ def simulate_with_uncertainty(
     saemix_object: SaemixObject,
     nsim: int = 1000,
     seed: Optional[int] = None,
+    rng: Optional[np.random.Generator] = None,
     predictions: bool = True,
     res_var: bool = True,
     parameter_uncertainty: bool = True,
@@ -347,7 +370,9 @@ def simulate_with_uncertainty(
     nsim : int
         Number of simulation replicates (default: 1000)
     seed : int, optional
-        Random seed for reproducibility
+        Random seed for reproducibility (deprecated, use rng instead)
+    rng : numpy.random.Generator, optional
+        Random number generator for reproducibility. Priority: rng > seed > saemix_object.control.rng
     predictions : bool
         If True, include population and individual predictions in output
     res_var : bool
@@ -373,9 +398,17 @@ def simulate_with_uncertainty(
     if saemix_object.results.mean_phi is None:
         raise ValueError("SaemixObject has not been fitted. Run saemix() first.")
 
-    # Set random seed
-    if seed is not None:
-        np.random.seed(seed)
+    # Determine RNG to use - priority: rng > seed > saemix_object.control.rng > new default
+    if rng is not None:
+        _rng = rng
+    elif seed is not None:
+        _rng = np.random.default_rng(seed)
+    elif hasattr(saemix_object, "control") and saemix_object.control is not None:
+        _rng = saemix_object.control.get("rng", None)
+        if _rng is None:
+            _rng = np.random.default_rng()
+    else:
+        _rng = np.random.default_rng()
 
     # Extract model components
     model = saemix_object.model
@@ -424,7 +457,7 @@ def simulate_with_uncertainty(
         # Sample population parameters if uncertainty is enabled
         if parameter_uncertainty and param_cov is not None:
             try:
-                pop_phi_sim = np.random.multivariate_normal(pop_phi, param_cov)
+                pop_phi_sim = _rng.multivariate_normal(pop_phi, param_cov)
             except np.linalg.LinAlgError:
                 pop_phi_sim = pop_phi.copy()
         else:
@@ -434,11 +467,11 @@ def simulate_with_uncertainty(
         if len(ind_eta) > 0:
             omega_sub = omega[np.ix_(ind_eta, ind_eta)]
             try:
-                eta = np.random.multivariate_normal(
+                eta = _rng.multivariate_normal(
                     np.zeros(len(ind_eta)), omega_sub, size=n_subjects
                 )
             except np.linalg.LinAlgError:
-                eta = np.random.normal(
+                eta = _rng.normal(
                     0, np.sqrt(np.diag(omega_sub)), size=(n_subjects, len(ind_eta))
                 )
         else:
@@ -465,7 +498,7 @@ def simulate_with_uncertainty(
         if res_var and model.modeltype == "structural":
             ytype = data.data["ytype"].values if "ytype" in data.data.columns else None
             g = error_function(f, respar, model.error_model, ytype)
-            epsilon = np.random.normal(0, 1, n_obs)
+            epsilon = _rng.standard_normal(n_obs)
             ysim = f + g * epsilon
         else:
             ysim = f.copy()
