@@ -257,6 +257,43 @@ def _estimate_residual(y, f, error_model, ytype, current_pres):
 def mstep(
     kiter, Uargs, Dargs, opt, structural_model, phiM, varList, suffStat, mean_phi_init
 ):
+    """
+    M-step of the SAEM algorithm.
+
+    This implements the stochastic approximation update of sufficient statistics
+    and the maximization step for population parameters (fixed effects, omega, residual error).
+
+    The omega update follows the R saemix implementation:
+    omega = statphi2/N + e1_phi'*e1_phi/N - statphi1'*e1_phi/N - e1_phi'*statphi1/N
+
+    where e1_phi is the covariate effect on random effect parameters.
+
+    Parameters
+    ----------
+    kiter : int
+        Current iteration number (1-based)
+    Uargs : dict
+        Algorithm arguments (indices, covariates, etc.)
+    Dargs : dict
+        Data arguments
+    opt : dict
+        Algorithm options
+    structural_model : callable
+        Structural model function
+    phiM : np.ndarray
+        Current individual parameters (all chains)
+    varList : dict
+        Variability parameters (omega, pres, etc.)
+    suffStat : dict
+        Sufficient statistics
+    mean_phi_init : np.ndarray
+        Initial mean phi values
+
+    Returns
+    -------
+    dict
+        Updated varList, suffStat, and mean_phi
+    """
     stepsize = opt["stepsize"][kiter - 1]
 
     mean_phi = mean_phi_init.copy()
@@ -269,18 +306,23 @@ def mstep(
             phi_chain = phiM.reshape((N, nb_parameters))[None, :, :]
         else:
             phi_chain = phiM.reshape((nchains, N, nb_parameters))
-        phi_eta = (
-            phi_chain[:, :, varList["ind_eta"]]
-            if len(varList["ind_eta"]) > 0
-            else np.zeros((nchains, N, 0))
-        )
-        stat1 = phi_eta.sum(axis=0)
-        stat2 = np.zeros((len(varList["ind_eta"]), len(varList["ind_eta"])))
-        stat3 = (phi_chain**2).sum(axis=0)
+
+        ind_eta = varList["ind_eta"]
+        nb_etas = len(ind_eta)
+
+        phi_eta = phi_chain[:, :, ind_eta] if nb_etas > 0 else np.zeros((nchains, N, 0))
+
+        # Compute current iteration statistics
+        stat1 = phi_eta.sum(axis=0)  # shape: (N, nb_etas)
+        stat2 = np.zeros((nb_etas, nb_etas))
+        stat3 = (phi_chain**2).sum(axis=0)  # shape: (N, nb_parameters)
+
         for k in range(nchains):
-            if len(varList["ind_eta"]) > 0:
-                phik = phi_eta[k, :, :]
+            if nb_etas > 0:
+                phik = phi_eta[k, :, :]  # shape: (N, nb_etas)
                 stat2 += phik.T @ phik
+
+        # Update sufficient statistics using stochastic approximation
         suffStat["statphi1"] = suffStat["statphi1"] + stepsize * (
             stat1 / nchains - suffStat["statphi1"]
         )
@@ -291,23 +333,79 @@ def mstep(
             stat3 / nchains - suffStat["statphi3"]
         )
 
+        # Estimate mean_phi (fixed effects with covariates)
         mean_phi = _estimate_mean_phi(phiM, Uargs)
 
-        # Update omega using accumulated sufficient statistics (statphi2)
-        # This is the correct SAEM M-step: Omega = S_2^(k) (sufficient statistic)
-        # NOT the current sample covariance
+        # Update omega using the correct SAEM formula from R saemix
+        # omega = statphi2/N + e1_phi'*e1_phi/N - statphi1'*e1_phi/N - e1_phi'*statphi1/N
+        # where e1_phi is mean_phi[:, ind_eta] (covariate effects on random effect parameters)
         omega_full = np.zeros_like(varList["omega"])
-        ind_eta = varList["ind_eta"]
-        if len(ind_eta) > 0:
-            omega_eta = suffStat["statphi2"]
+
+        if nb_etas > 0:
+            # e1_phi: the mean phi values for random effect parameters (N x nb_etas)
+            e1_phi = mean_phi[:, ind_eta]
+
+            # Compute omega using the full formula matching R implementation
+            # This accounts for covariate effects on random effect parameters
+            omega_eta = (
+                suffStat["statphi2"] / N
+                + (e1_phi.T @ e1_phi) / N
+                - (suffStat["statphi1"].T @ e1_phi) / N
+                - (e1_phi.T @ suffStat["statphi1"]) / N
+            )
+
             omega_full[np.ix_(ind_eta, ind_eta)] = omega_eta
+
+        # Ensure non-negative values (numerical safety)
         omega_full = np.where(omega_full < 0, 1e-6, omega_full)
+
+        # Apply covariance model structure (which elements to estimate)
         omega_new = np.zeros_like(varList["omega"])
         indest_omega = Uargs.get("indest_omega", None)
         if indest_omega is not None:
             omega_new[indest_omega] = omega_full[indest_omega]
         else:
             omega_new = omega_full
+
+        # Apply simulated annealing to diagonal elements during burn-in phase
+        # This matches the R saemix implementation
+        i0_omega2 = Uargs.get(
+            "i0_omega2", np.array([], dtype=int)
+        )  # params without IIV
+        i1_omega2 = Uargs.get("i1_omega2", ind_eta)  # params with IIV
+
+        # Ensure diag_omega is writable (may be a view from initialization)
+        if not varList["diag_omega"].flags.writeable:
+            varList["diag_omega"] = varList["diag_omega"].copy()
+
+        if kiter <= opt["nbiter_sa"]:
+            # Simulated annealing phase
+            diag_omega_full = np.diag(omega_new)
+
+            if len(i1_omega2) > 0:
+                vec1 = diag_omega_full[i1_omega2]
+                vec2 = varList["diag_omega"][i1_omega2] * opt["alpha1_sa"]
+                # Use the larger of current SA value or new estimate
+                idx = (vec1 < vec2).astype(int)
+                varList["diag_omega"][i1_omega2] = idx * vec2 + (1 - idx) * vec1
+
+            if len(i0_omega2) > 0:
+                # Decay parameters without IIV
+                varList["diag_omega"][i0_omega2] = varList["diag_omega"][
+                    i0_omega2
+                ] * opt.get("alpha0_sa", 0.97)
+        else:
+            # After SA phase, use the computed diagonal
+            varList["diag_omega"] = np.diag(omega_new)
+
+        # Update omega with the (possibly SA-modified) diagonal
+        omega_new = (
+            omega_new - np.diag(np.diag(omega_new)) + np.diag(varList["diag_omega"])
+        )
+
+        # Ensure positive definiteness
+        omega_new = _ensure_positive_definite(omega_new)
+
         varList["omega"] = omega_new
 
         # Residual error update
@@ -341,3 +439,39 @@ def mstep(
         "suffStat": suffStat,
         "mean_phi": mean_phi,
     }
+
+
+def _ensure_positive_definite(omega, min_eigenvalue=1e-8):
+    """
+    Ensure a matrix is positive definite by correcting small/negative eigenvalues.
+
+    Parameters
+    ----------
+    omega : np.ndarray
+        Covariance matrix to check/correct
+    min_eigenvalue : float
+        Minimum allowed eigenvalue
+
+    Returns
+    -------
+    np.ndarray
+        Positive definite covariance matrix
+    """
+    # Ensure symmetry
+    omega = (omega + omega.T) / 2
+
+    try:
+        eigenvalues, eigenvectors = np.linalg.eigh(omega)
+
+        if np.any(eigenvalues < min_eigenvalue):
+            # Correct small/negative eigenvalues
+            eigenvalues = np.maximum(eigenvalues, min_eigenvalue)
+            # Reconstruct matrix
+            omega = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
+            # Ensure symmetry after reconstruction
+            omega = (omega + omega.T) / 2
+    except np.linalg.LinAlgError:
+        # If eigendecomposition fails, add small diagonal
+        omega = omega + min_eigenvalue * np.eye(omega.shape[0])
+
+    return omega

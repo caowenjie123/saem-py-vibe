@@ -95,11 +95,20 @@ Two critical mathematical issues were identified and fixed:
    - **Theory**: SAEM requires ∑γₖ → ∞ and ∑γₖ² < ∞ for convergence
    - **Impact**: Ensures theoretical convergence guarantees are satisfied
 
-2. **Omega Update** (`saemix/algorithm/mstep.py:296-311`):
-   - **Fixed**: Changed to use accumulated sufficient statistics `Ω = suffStat["statphi2"]`
-   - **Previous bug**: Was computing from current iteration only: `Ω = (ηᵀη)/n`
-   - **Theory**: SAEM M-step must use stochastically approximated sufficient statistics, not raw samples
-   - **Impact**: Properly implements the stochastic approximation; improves variance estimation stability
+2. **Omega Update** (`saemix/algorithm/mstep.py:340-400`):
+   - **Fixed**: Complete omega update formula matching R saemix implementation:
+     ```
+     omega = statphi2/N + e1_phi'*e1_phi/N - statphi1'*e1_phi/N - e1_phi'*statphi1/N
+     ```
+   - **Previous bug**: Was missing covariate effect correction terms
+   - **Theory**: SAEM M-step must account for covariate effects on random effect parameters
+   - **Impact**: Properly estimates variance components when covariates affect random effects
+
+3. **Simulated Annealing for Omega Diagonal** (`saemix/algorithm/mstep.py:375-395`):
+   - **Fixed**: Added simulated annealing during burn-in phase for diagonal omega elements
+   - **Previous bug**: Missing SA phase that prevents premature variance collapse
+   - **Theory**: SA maintains exploration during burn-in by keeping variance estimates from shrinking too fast
+   - **Impact**: Improves convergence stability and prevents local minima
 
 ### Module Organization
 
