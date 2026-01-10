@@ -769,7 +769,7 @@ def plot_parameters_vs_covariates(
     if hasattr(phi, "values"):
         phi = phi.values
 
-    n_subjects = phi.shape[0]
+    phi.shape[0]
     n_params = phi.shape[1]
 
     # Get parameter names
@@ -928,7 +928,7 @@ def plot_randeff_vs_covariates(
     if hasattr(eta, "values"):
         eta = eta.values
 
-    n_subjects = eta.shape[0]
+    eta.shape[0]
     n_eta = eta.shape[1]
 
     # Get parameter names for eta

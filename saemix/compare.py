@@ -5,7 +5,7 @@ This module provides functions for comparing multiple fitted SAEM models
 using information criteria (AIC, BIC, BIC_cov).
 """
 
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd

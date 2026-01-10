@@ -7,10 +7,12 @@ particularly the ID conversion functions.
 Feature: saemix-robustness-optimization
 """
 
+import numpy as np
 import pytest
-from hypothesis import given, strategies as st, settings
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from saemix.utils import id_to_index, index_to_id
+from saemix.utils import LOG_EPS, LOGIT_EPS, id_to_index, index_to_id, transphi, transpsi
 
 
 class TestIDConversionProperties:
@@ -104,11 +106,8 @@ class TestIDConversionErrorHandling:
         assert index_to_id(0) == 1
 
 
-import numpy as np
-from saemix.utils import transphi, transpsi, LOG_EPS, LOGIT_EPS
-
-
 class TestTransformationOutputFiniteness:
+
     """
     Property-based tests for transformation output finiteness.
 

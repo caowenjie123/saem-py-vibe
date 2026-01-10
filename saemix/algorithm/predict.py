@@ -27,7 +27,7 @@ def saemix_predict(saemix_object, type: List[str] = ["ipred", "ppred"]):
     results = saemix_object.results
 
     xind = data.data[data.name_predictors].values
-    yobs = data.data[data.name_response].values
+    data.data[data.name_response].values
     index = data.data["index"].values
 
     predictions = {}

@@ -9,7 +9,7 @@ Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.7
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings, strategies as st, assume
+from hypothesis import given, settings, strategies as st
 
 from saemix import saemix, saemix_data, saemix_model, saemix_control
 from saemix.algorithm.conddist import conddist_saemix
@@ -179,9 +179,7 @@ class TestConddistValidation:
 
     def test_unfitted_object_raises_error(self):
         """Test that unfitted object raises ValueError."""
-        from saemix.results import SaemixObject, SaemixRes
-        from saemix.data import SaemixData
-        from saemix.model import SaemixModel
+        from saemix.results import SaemixObject
 
         data = create_test_data(5, 4)
         model = saemix_model(

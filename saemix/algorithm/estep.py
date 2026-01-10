@@ -187,9 +187,9 @@ def estep(
             eta_map = phi_mapM[:, varList["ind_eta"]] - mean_phiM[:, varList["ind_eta"]]
             psi_map = transphi(phi_map, Dargs["transform_par"])
             gradf0 = _grad_structural_model(psi_map, Dargs, varList)
-            gradf = np.tile(gradf0, (nchains, 1))
+            np.tile(gradf0, (nchains, 1))
             gradh0 = _grad_transphi(phi_map, Dargs, varList)
-            gradh = np.tile(gradh0, (nchains, 1, 1))
+            np.tile(gradh0, (nchains, 1, 1))
             Gamma, chol_Gamma, inv_Gamma = _compute_gamma(
                 gradf0, gradh0, varList, Dargs
             )

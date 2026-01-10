@@ -8,15 +8,14 @@ Feature: saemix-python-enhancement
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
 
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
 
 from saemix.algorithm.map_estimation import error_function
 from saemix.results import SaemixObject
-from saemix.utils import cutoff, transphi
+from saemix.utils import transphi
 
 
 def simulate_saemix(
@@ -113,7 +112,6 @@ def simulate_saemix(
 
     # Get omega (random effects covariance)
     omega = results.omega
-    n_parameters = model.n_parameters
 
     # Get data structure
     xind = data.data[data.name_predictors].values
@@ -291,7 +289,6 @@ def simulate_discrete_saemix(
 
     # Get omega
     omega = results.omega
-    n_parameters = model.n_parameters
 
     # Get data structure
     xind = data.data[data.name_predictors].values

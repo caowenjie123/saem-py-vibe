@@ -1,4 +1,3 @@
-from typing import Callable
 
 import numpy as np
 from scipy.optimize import minimize
@@ -206,8 +205,6 @@ def map_saemix(saemix_object):
     SaemixObject
         更新了map_phi和map_psi的结果对象
     """
-    from saemix.data import SaemixData
-    from saemix.model import SaemixModel
     from saemix.results import SaemixObject
 
     if not isinstance(saemix_object, SaemixObject):

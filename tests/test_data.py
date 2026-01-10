@@ -1,7 +1,7 @@
 import unittest
 import pandas as pd
 import numpy as np
-from saemix.data import SaemixData, saemix_data
+from saemix.data import saemix_data
 
 
 class TestSaemixData(unittest.TestCase):

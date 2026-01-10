@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict
 
 from saemix import saemix, saemix_data, saemix_model, saemix_control
 

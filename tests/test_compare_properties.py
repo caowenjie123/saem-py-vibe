@@ -9,7 +9,7 @@ Validates: Requirements 2.1, 2.2, 2.3, 2.5
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings, strategies as st, assume
+from hypothesis import given, settings, strategies as st
 
 from saemix import saemix, saemix_data, saemix_model, saemix_control
 from saemix.compare import compare_saemix, aic, bic, loglik

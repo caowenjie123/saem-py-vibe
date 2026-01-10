@@ -9,7 +9,6 @@ Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6
 """
 
 import numpy as np
-import pytest
 from hypothesis import given, strategies as st, settings, assume
 
 from saemix.control import saemix_control

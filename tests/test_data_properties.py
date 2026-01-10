@@ -8,7 +8,6 @@ Feature: saemix-robustness-optimization
 """
 
 import numpy as np
-import pandas as pd
 import pytest
 from hypothesis import given, settings, strategies as st, assume
 
@@ -48,10 +47,10 @@ class TestAuxiliaryColumnProperties:
         df["MDV"] = 0
 
         # Store original auxiliary values before processing
-        original_mdv = df["MDV"].values.copy()
-        original_cens = df["CENS"].values.copy()
-        original_occ = df["OCC"].values.copy()
-        original_ytype = df["YTYPE"].values.copy()
+        df["MDV"].values.copy()
+        df["CENS"].values.copy()
+        df["OCC"].values.copy()
+        df["YTYPE"].values.copy()
 
         # Create SaemixData with auxiliary column specifications
         saemix_data = SaemixData(

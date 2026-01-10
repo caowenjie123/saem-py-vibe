@@ -8,7 +8,6 @@ Validates: Requirements 4.1, 4.2, 4.4
 
 import importlib
 import os
-import sys
 import pytest
 from hypothesis import given, settings, strategies as st
 
@@ -237,7 +236,7 @@ class TestPackageStructureProperty:
         assert hasattr(module, "__name__"), f"Module {module_name} should have __name__"
         assert (
             module.__name__ == module_name
-        ), f"Module __name__ should match import name"
+        ), "Module __name__ should match import name"
 
         # Verify module has __file__ attribute (indicates it's a real file)
         assert hasattr(module, "__file__"), f"Module {module_name} should have __file__"

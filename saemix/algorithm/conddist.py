@@ -8,12 +8,17 @@ The main function `conddist_saemix` uses Metropolis-Hastings sampling to
 estimate the conditional distribution p(phi_i | y_i, theta) for each subject.
 """
 
-from typing import Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
-from scipy.optimize import minimize
 
 from saemix.utils import cutoff, transphi
+
+if TYPE_CHECKING:
+    from saemix.data import SaemixData
+    from saemix.model import SaemixModel
+    from saemix.results import SaemixObject
+
 
 
 def conddist_saemix(
@@ -419,9 +424,9 @@ def compute_gelman_rubin(chains: list) -> np.ndarray:
     if len(chains) < 2:
         return np.ones(chains[0].shape[1])
 
-    n_chains = len(chains)
+    len(chains)
     n_samples = chains[0].shape[0]
-    n_params = chains[0].shape[1]
+    chains[0].shape[1]
 
     # Stack chains
     all_chains = np.array(chains)  # (n_chains, n_samples, n_params)
@@ -430,7 +435,7 @@ def compute_gelman_rubin(chains: list) -> np.ndarray:
     chain_means = np.mean(all_chains, axis=1)  # (n_chains, n_params)
 
     # Overall mean
-    overall_mean = np.mean(chain_means, axis=0)  # (n_params,)
+    np.mean(chain_means, axis=0)  # (n_params,)
 
     # Between-chain variance
     B = n_samples * np.var(chain_means, axis=0, ddof=1)  # (n_params,)

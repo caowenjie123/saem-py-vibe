@@ -2,7 +2,7 @@ import numpy as np
 
 from saemix.data import SaemixData
 from saemix.model import SaemixModel
-from saemix.utils import mydiag, transpsi
+from saemix.utils import transpsi
 
 
 def initialise_main_algo(
@@ -88,7 +88,7 @@ def initialise_main_algo(
     betas_ini = betas_ini.reshape(-1, 1)
 
     nb_betas = int(np.sum(saemix_model.betaest_model))
-    ind_covariate = np.where(saemix_model.betaest_model == 1)
+    np.where(saemix_model.betaest_model == 1)
 
     LCOV = np.zeros((nb_betas, nb_parameters))
     MCOV = np.zeros((nb_betas, nb_parameters))

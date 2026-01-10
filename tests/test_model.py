@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from saemix.model import SaemixModel, saemix_model
+from saemix.model import saemix_model
 
 
 def simple_model(psi, id, xidep):

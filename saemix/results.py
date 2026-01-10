@@ -5,11 +5,15 @@ This module contains the SaemixRes and SaemixObject classes for storing
 and accessing SAEM estimation results.
 """
 
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+if TYPE_CHECKING:
+    from saemix.data import SaemixData
+    from saemix.model import SaemixModel
 
 
 class SaemixRes:
@@ -257,15 +261,15 @@ class SaemixRes:
         """
         from saemix.algorithm.map_estimation import error_function
         from saemix.algorithm.predict import saemix_predict
-        from saemix.utils import cutoff, transphi
+        from saemix.utils import cutoff
 
         data = saemix_object.data
         model = saemix_object.model
 
         # Get observations
         yobs = data.data[data.name_response].values
-        xind = data.data[data.name_predictors].values
-        index = data.data["index"].values
+        data.data[data.name_predictors].values
+        data.data["index"].values
 
         # Get predictions
         pred_dict = saemix_predict(saemix_object, type=["ipred", "ppred"])

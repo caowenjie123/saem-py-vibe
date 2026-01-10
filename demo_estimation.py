@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from saemix import saemix, saemix_data, saemix_model, saemix_control
-import matplotlib.pyplot as plt
 
 
 def linear_model(psi, id, xidep):
@@ -43,11 +42,11 @@ data = pd.DataFrame(data_list)
 print("=" * 60)
 print("SAEM参数估计演示")
 print("=" * 60)
-print(f"\n数据信息:")
+print("\n数据信息:")
 print(f"  个体数量: {n_subjects}")
 print(f"  每个个体观测数: {n_obs_per_subject}")
 print(f"  总观测数: {len(data)}")
-print(f"\n真实参数值:")
+print("\n真实参数值:")
 print(f"  总体均值 - a: {true_pop_a:.3f}, b: {true_pop_b:.3f}")
 print(f"  随机效应标准差 - omega_a: {omega_a:.3f}, omega_b: {omega_b:.3f}")
 print(f"  残差标准差: {sigma:.3f}")
@@ -93,24 +92,24 @@ print("参数估计结果")
 print("=" * 60)
 
 mean_phi = result.results.mean_phi
-print(f"\n总体均值参数 (mean_phi):")
+print("\n总体均值参数 (mean_phi):")
 print(f"  a: {mean_phi[0, 0]:.4f} (真实值: {true_pop_a:.4f})")
 print(f"  b: {mean_phi[0, 1]:.4f} (真实值: {true_pop_b:.4f})")
 
 if result.results.omega is not None:
     omega = result.results.omega
-    print(f"\n随机效应协方差矩阵 (omega):")
+    print("\n随机效应协方差矩阵 (omega):")
     print(f"  omega_a: {np.sqrt(omega[0, 0]):.4f} (真实值: {omega_a:.4f})")
     print(f"  omega_b: {np.sqrt(omega[1, 1]):.4f} (真实值: {omega_b:.4f})")
     print(f"  协方差矩阵:\n{omega}")
 
 if result.results.respar is not None:
-    print(f"\n残差参数 (respar):")
+    print("\n残差参数 (respar):")
     print(f"  sigma: {result.results.respar[0]:.4f} (真实值: {sigma:.4f})")
 
 print_phi = result.results.cond_mean_phi
 if print_phi is not None and print_phi.shape[0] > 0:
-    print(f"\n个体参数估计 (前5个个体):")
+    print("\n个体参数估计 (前5个个体):")
     for i in range(min(5, print_phi.shape[0])):
         print(f"  个体 {i+1}: a={print_phi[i, 0]:.4f}, b={print_phi[i, 1]:.4f}")
 
@@ -121,15 +120,15 @@ print("=" * 60)
 ppred = result.predict(type="ppred")
 ipred = result.predict(type="ipred")
 
-print(f"\n群体预测 (ppred) - 前10个值:")
+print("\n群体预测 (ppred) - 前10个值:")
 print(ppred[:10])
 
-print(f"\n个体预测 (ipred) - 前10个值:")
+print("\n个体预测 (ipred) - 前10个值:")
 print(ipred[:10])
 
 mse_ppred = np.mean((data['Y'].values - ppred) ** 2)
 mse_ipred = np.mean((data['Y'].values - ipred) ** 2)
-print(f"\n预测误差:")
+print("\n预测误差:")
 print(f"  ppred MSE: {mse_ppred:.4f}")
 print(f"  ipred MSE: {mse_ipred:.4f}")
 

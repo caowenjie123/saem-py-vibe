@@ -6,9 +6,7 @@ Tests for error handling when dependencies are missing.
 Validates: Requirements 7.1, 7.2
 """
 
-import sys
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 class TestOptionalDependencyHandling:

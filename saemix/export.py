@@ -6,7 +6,7 @@ Implements Requirements 7.1-7.6.
 """
 
 import os
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -133,9 +133,6 @@ def export_to_csv(
     if parent_dir:
         _ensure_directory(parent_dir)
 
-    res = saemix_object.results
-    model = saemix_object.model
-    data = saemix_object.data
 
     if what == "parameters":
         df = _get_parameters_df(saemix_object)

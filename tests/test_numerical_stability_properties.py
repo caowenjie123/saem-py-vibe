@@ -10,7 +10,7 @@ Feature: saemix-robustness-optimization
 import warnings
 import pytest
 import numpy as np
-from hypothesis import given, strategies as st, settings, assume
+from hypothesis import given, strategies as st, settings
 
 from saemix.algorithm.mstep import compute_omega_safe
 from saemix.algorithm.likelihood import compute_log_likelihood_safe
@@ -248,7 +248,7 @@ class TestCovarianceMatrixCorrection:
         phi_samples, mu = phi_mu
 
         # Should issue warning about small eigenvalues
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             omega = compute_omega_safe(phi_samples, mu)
 

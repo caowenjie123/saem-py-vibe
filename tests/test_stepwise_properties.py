@@ -9,7 +9,7 @@ Validates: Requirements 4.1, 4.2, 4.3, 4.5
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given, settings, strategies as st, assume
+from hypothesis import given, settings, strategies as st
 
 from saemix import saemix, saemix_data, saemix_model, saemix_control
 from saemix.stepwise import (
@@ -22,7 +22,6 @@ from saemix.stepwise import (
     _remove_covariate_from_model,
     _fit_model_with_covariates,
 )
-from saemix.compare import bic
 
 
 def linear_model_with_cov(psi, id, xidep):

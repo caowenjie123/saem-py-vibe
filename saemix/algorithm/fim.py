@@ -1,6 +1,5 @@
 import numpy as np
 
-from saemix.utils import cutoff, mydiag, transphi
 
 
 def fim_saemix(saemix_object):
@@ -22,15 +21,12 @@ def fim_saemix(saemix_object):
     这是一个基础框架实现，完整实现需要大量的数值计算细节。
     参考R代码中的fim.saemix函数以获取完整实现。
     """
-    from saemix.data import SaemixData
-    from saemix.model import SaemixModel
     from saemix.results import SaemixObject
 
     if not isinstance(saemix_object, SaemixObject):
         raise TypeError("saemix_object must be a SaemixObject instance")
 
     model = saemix_object.model
-    data = saemix_object.data
     results = saemix_object.results
 
     if results.omega is None:
@@ -45,7 +41,6 @@ def fim_saemix(saemix_object):
     hat_phi = results.cond_mean_phi
     nphi = hat_phi.shape[1]
     covariance_model = model.covariance_model
-    omega = results.omega
 
     nomega = np.sum(np.tril(covariance_model) != 0)
 

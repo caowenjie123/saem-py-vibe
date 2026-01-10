@@ -27,7 +27,6 @@ from saemix import (
     simulate_saemix,
     save_results,
     export_to_csv,
-    PlotOptions,
     set_plot_options,
     get_plot_options,
     reset_plot_options,
@@ -249,7 +248,7 @@ print("-" * 60)
 set_plot_options(figsize=(12, 8), dpi=150, alpha=0.7)
 
 options = get_plot_options()
-print(f"Current plot options:")
+print("Current plot options:")
 print(f"  Figure size: {options.figsize}")
 print(f"  DPI: {options.dpi}")
 print(f"  Alpha: {options.alpha}")

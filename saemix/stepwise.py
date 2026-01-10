@@ -8,15 +8,12 @@ Feature: saemix-python-enhancement
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
 """
 
-from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 
 from saemix.compare import aic, bic
-from saemix.data import SaemixData
-from saemix.model import SaemixModel, saemix_model
+from saemix.model import saemix_model
 from saemix.results import SaemixObject
 
 
@@ -632,7 +629,6 @@ def _fit_model_with_covariates(
 ) -> SaemixObject:
     """Fit a model with the specified covariate model."""
     from saemix.main import saemix
-    from saemix.model import saemix_model
 
     original_model = saemix_object.model
     data = saemix_object.data

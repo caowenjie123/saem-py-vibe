@@ -13,7 +13,7 @@ from hypothesis import given, settings, strategies as st
 from scipy import stats
 
 from saemix import saemix, saemix_data, saemix_model, saemix_control
-from saemix.results import SaemixRes, SaemixObject
+from saemix.results import SaemixRes
 
 
 def linear_model(psi, id, xidep):

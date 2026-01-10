@@ -41,7 +41,7 @@ get_plot_options : Get current plot options
 reset_plot_options : Reset to default options
 """
 
-import warnings
+import warnings  # noqa: F401 - used for potential warning filters
 
 # =============================================================================
 # Core Dependencies Check (Required)
@@ -50,28 +50,29 @@ import warnings
 # If any are missing, we raise an ImportError immediately with a clear message.
 
 try:
-    import numpy as np
+    import numpy as np  # noqa: F401 - dependency check
 except ImportError as e:
     raise ImportError(
-        f"[saemix] Missing required dependency: numpy. "
-        f"Please install with: pip install numpy"
+        "[saemix] Missing required dependency: numpy. "
+        "Please install with: pip install numpy"
     ) from e
 
 try:
-    import pandas as pd
+    import pandas as pd  # noqa: F401 - dependency check
 except ImportError as e:
     raise ImportError(
-        f"[saemix] Missing required dependency: pandas. "
-        f"Please install with: pip install pandas"
+        "[saemix] Missing required dependency: pandas. "
+        "Please install with: pip install pandas"
     ) from e
 
 try:
-    from scipy import stats
+    from scipy import stats  # noqa: F401 - dependency check
 except ImportError as e:
     raise ImportError(
-        f"[saemix] Missing required dependency: scipy. "
-        f"Please install with: pip install scipy"
+        "[saemix] Missing required dependency: scipy. "
+        "Please install with: pip install scipy"
     ) from e
+
 
 # =============================================================================
 # Optional Dependencies Check (Lazy)
@@ -81,11 +82,12 @@ except ImportError as e:
 
 _HAS_MATPLOTLIB = False
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # noqa: F401 - availability check
 
     _HAS_MATPLOTLIB = True
 except ImportError:
     pass
+
 
 
 def _require_matplotlib():
@@ -125,17 +127,17 @@ def _require_matplotlib():
 # =============================================================================
 # Version Information
 # =============================================================================
-from saemix._version import __version__, __version_info__
-from saemix.algorithm.conddist import compute_gelman_rubin, conddist_saemix
-from saemix.algorithm.likelihood import llgq_saemix, llis_saemix
-from saemix.compare import aic, bic, compare_saemix, loglik
-from saemix.control import saemix_control
+from saemix._version import __version__, __version_info__  # noqa: E402
+from saemix.algorithm.conddist import compute_gelman_rubin, conddist_saemix  # noqa: E402
+from saemix.algorithm.likelihood import llgq_saemix, llis_saemix  # noqa: E402
+from saemix.compare import aic, bic, compare_saemix, loglik  # noqa: E402
+from saemix.control import saemix_control  # noqa: E402
 
 # =============================================================================
 # Package Imports
 # =============================================================================
-from saemix.data import SaemixData, saemix_data
-from saemix.diagnostics import (
+from saemix.data import SaemixData, saemix_data  # noqa: E402
+from saemix.diagnostics import (  # noqa: E402
     compute_npde,
     compute_residuals,
     npde_tests,
@@ -154,14 +156,14 @@ from saemix.diagnostics import (
     plot_vpc,
     simulate_observations,
 )
-from saemix.export import (
+from saemix.export import (  # noqa: E402
     export_to_csv,
     save_plots,
     save_results,
 )
-from saemix.main import saemix
-from saemix.model import SaemixModel, saemix_model
-from saemix.plot_options import (
+from saemix.main import saemix  # noqa: E402
+from saemix.model import SaemixModel, saemix_model  # noqa: E402
+from saemix.plot_options import (  # noqa: E402
     PlotOptions,
     apply_plot_options,
     get_plot_options,
@@ -169,17 +171,18 @@ from saemix.plot_options import (
     reset_plot_options,
     set_plot_options,
 )
-from saemix.results import SaemixObject, SaemixRes
-from saemix.simulation import (
+from saemix.results import SaemixObject, SaemixRes  # noqa: E402
+from saemix.simulation import (  # noqa: E402
     simulate_discrete_saemix,
     simulate_saemix,
     simulate_with_uncertainty,
 )
-from saemix.stepwise import (
+from saemix.stepwise import (  # noqa: E402
     backward_procedure,
     forward_procedure,
     stepwise_procedure,
 )
+
 
 __all__ = [
     # Version info

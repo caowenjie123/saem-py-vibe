@@ -8,7 +8,6 @@ Validates: Requirements 7.1, 7.2, 7.3, 7.4
 
 import os
 import tempfile
-import shutil
 import numpy as np
 import pandas as pd
 import pytest
@@ -212,9 +211,7 @@ class TestExportErrorHandling:
 
     def test_export_unfitted_object_raises_error(self):
         """Test that exporting unfitted object raises ValueError."""
-        from saemix.results import SaemixObject, SaemixRes
-        from saemix.data import SaemixData
-        from saemix.model import SaemixModel
+        from saemix.results import SaemixObject
 
         # Create minimal unfitted object
         data = create_test_data()
