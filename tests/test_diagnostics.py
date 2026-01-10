@@ -8,21 +8,24 @@ Validates: Requirements 6.7
 """
 
 import unittest
+
 import numpy as np
 import pandas as pd
-import matplotlib
+import pytest
 
+# Skip this entire module if matplotlib is not installed
+matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")  # Use non-interactive backend for testing
-import matplotlib.pyplot as plt
+plt = pytest.importorskip("matplotlib.pyplot")
 
-from saemix import saemix, saemix_data, saemix_model, saemix_control
-from saemix.diagnostics import (
+from saemix import saemix, saemix_control, saemix_data, saemix_model  # noqa: E402
+from saemix.diagnostics import (  # noqa: E402
     plot_convergence,
+    plot_correlations,
     plot_likelihood,
+    plot_marginal_distribution,
     plot_parameters_vs_covariates,
     plot_randeff_vs_covariates,
-    plot_marginal_distribution,
-    plot_correlations,
 )
 
 
