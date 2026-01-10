@@ -187,15 +187,15 @@ def save_plots(
     -----
     Requires matplotlib to be installed.
     """
+    # Create directory first, before any potentially failing imports
+    _ensure_directory(directory)
+
     try:
         import matplotlib.pyplot as plt
     except ImportError:
         raise ImportError("matplotlib is required for saving plots")
 
     from saemix import diagnostics
-
-    # Create directory
-    _ensure_directory(directory)
 
     # Define available plots
     available_plots = {
