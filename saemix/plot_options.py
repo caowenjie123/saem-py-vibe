@@ -5,9 +5,9 @@ This module provides a centralized system for managing plot appearance settings.
 Implements Requirements 8.1-8.5.
 """
 
-from dataclasses import dataclass, field, asdict
-from typing import Tuple, Optional, Dict, Any
 import copy
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, Optional, Tuple
 
 
 @dataclass
@@ -73,8 +73,8 @@ class PlotOptions:
         the current PlotOptions configuration.
         """
         try:
-            import matplotlib.pyplot as plt
             import matplotlib as mpl
+            import matplotlib.pyplot as plt
         except ImportError:
             raise ImportError("matplotlib is required for plot options")
 

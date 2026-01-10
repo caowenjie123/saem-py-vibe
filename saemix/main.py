@@ -1,13 +1,14 @@
 from typing import Optional
+
 import numpy as np
+
+from saemix.algorithm.initialization import initialise_main_algo
+from saemix.algorithm.saem import run_saem
+from saemix.control import saemix_control
 from saemix.data import SaemixData
 from saemix.model import SaemixModel
 from saemix.results import SaemixObject
-from saemix.control import saemix_control
-from saemix.algorithm.initialization import initialise_main_algo
-from saemix.algorithm.saem import run_saem
-from saemix.utils import transphi
-from saemix.utils import cutoff
+from saemix.utils import cutoff, transphi
 
 
 def saemix(

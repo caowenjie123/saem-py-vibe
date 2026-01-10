@@ -8,14 +8,15 @@ Feature: saemix-python-enhancement
 Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
 """
 
+from typing import Callable, List, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Callable, Union, List
 from scipy.stats import norm
 
-from saemix.results import SaemixObject
-from saemix.utils import transphi, cutoff
 from saemix.algorithm.map_estimation import error_function
+from saemix.results import SaemixObject
+from saemix.utils import cutoff, transphi
 
 
 def simulate_saemix(

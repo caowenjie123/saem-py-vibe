@@ -8,11 +8,12 @@ The main function `conddist_saemix` uses Metropolis-Hastings sampling to
 estimate the conditional distribution p(phi_i | y_i, theta) for each subject.
 """
 
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
-from typing import Optional, Tuple, Dict, Any
 from scipy.optimize import minimize
 
-from saemix.utils import transphi, cutoff
+from saemix.utils import cutoff, transphi
 
 
 def conddist_saemix(

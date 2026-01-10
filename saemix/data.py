@@ -1,7 +1,8 @@
-import pandas as pd
-import numpy as np
-from typing import Union, List, Optional, Dict, Any
 import os
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import pandas as pd
 
 
 class SaemixData:

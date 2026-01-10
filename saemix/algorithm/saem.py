@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Optional
+
+import numpy as np
+
 from saemix.algorithm.estep import estep
 from saemix.algorithm.mstep import mstep
 from saemix.utils import transphi

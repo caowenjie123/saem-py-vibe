@@ -5,9 +5,10 @@ This module contains the SaemixRes and SaemixObject classes for storing
 and accessing SAEM estimation results.
 """
 
+from typing import List, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Union, List
 from scipy import stats
 
 
@@ -254,9 +255,9 @@ class SaemixRes:
         - wres: Weighted residuals (ires / g)
         - pd_: Prediction discrepancies
         """
-        from saemix.algorithm.predict import saemix_predict
         from saemix.algorithm.map_estimation import error_function
-        from saemix.utils import transphi, cutoff
+        from saemix.algorithm.predict import saemix_predict
+        from saemix.utils import cutoff, transphi
 
         data = saemix_object.data
         model = saemix_object.model

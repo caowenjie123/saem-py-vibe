@@ -10,17 +10,17 @@ Model Information:
 Fixed Effects:
 
 Variance Components (Omega diagonal):
-  omega[1,1]: 146.6255
-  omega[2,2]: 132.4130
-  omega[3,3]: 12.6595
+  omega[1,1]: 0.4040
+  omega[2,2]: 0.0212
+  omega[3,3]: 0.0664
 
 Residual Error Parameters:
-  sigma[1]: 0.8081
+  sigma[1]: 0.7450
   sigma[2]: 0.0000
 
 Model Fit:
-  Log-likelihood: -276.3102
-  AIC: 566.6204
-  BIC: 570.0148
+  Log-likelihood: -178.5566
+  AIC: 371.1131
+  BIC: 374.5075
 
 ============================================================

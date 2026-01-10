@@ -126,59 +126,59 @@ def _require_matplotlib():
 # Version Information
 # =============================================================================
 from saemix._version import __version__, __version_info__
+from saemix.algorithm.conddist import compute_gelman_rubin, conddist_saemix
+from saemix.algorithm.likelihood import llgq_saemix, llis_saemix
+from saemix.compare import aic, bic, compare_saemix, loglik
+from saemix.control import saemix_control
 
 # =============================================================================
 # Package Imports
 # =============================================================================
 from saemix.data import SaemixData, saemix_data
-from saemix.model import SaemixModel, saemix_model
-from saemix.control import saemix_control
-from saemix.results import SaemixObject, SaemixRes
-from saemix.main import saemix
-from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
-from saemix.algorithm.conddist import conddist_saemix, compute_gelman_rubin
-from saemix.compare import compare_saemix, aic, bic, loglik
-from saemix.stepwise import (
-    forward_procedure,
-    backward_procedure,
-    stepwise_procedure,
-)
-from saemix.simulation import (
-    simulate_saemix,
-    simulate_discrete_saemix,
-    simulate_with_uncertainty,
-)
 from saemix.diagnostics import (
-    plot_observed_vs_pred,
-    plot_residuals,
-    plot_individual_fits,
-    simulate_observations,
     compute_npde,
-    npde_tests,
-    plot_npde,
-    plot_vpc,
     compute_residuals,
-    plot_gof,
-    plot_eta_distributions,
+    npde_tests,
     plot_convergence,
+    plot_correlations,
+    plot_eta_distributions,
+    plot_gof,
+    plot_individual_fits,
     plot_likelihood,
+    plot_marginal_distribution,
+    plot_npde,
+    plot_observed_vs_pred,
     plot_parameters_vs_covariates,
     plot_randeff_vs_covariates,
-    plot_marginal_distribution,
-    plot_correlations,
+    plot_residuals,
+    plot_vpc,
+    simulate_observations,
 )
 from saemix.export import (
-    save_results,
     export_to_csv,
     save_plots,
+    save_results,
 )
+from saemix.main import saemix
+from saemix.model import SaemixModel, saemix_model
 from saemix.plot_options import (
     PlotOptions,
-    set_plot_options,
-    get_plot_options,
-    reset_plot_options,
     apply_plot_options,
+    get_plot_options,
     merge_options,
+    reset_plot_options,
+    set_plot_options,
+)
+from saemix.results import SaemixObject, SaemixRes
+from saemix.simulation import (
+    simulate_discrete_saemix,
+    simulate_saemix,
+    simulate_with_uncertainty,
+)
+from saemix.stepwise import (
+    backward_procedure,
+    forward_procedure,
+    stepwise_procedure,
 )
 
 __all__ = [

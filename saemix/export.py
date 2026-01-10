@@ -6,9 +6,10 @@ Implements Requirements 7.1-7.6.
 """
 
 import os
+from typing import TYPE_CHECKING, List, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from saemix.results import SaemixObject

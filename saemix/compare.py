@@ -5,9 +5,10 @@ This module provides functions for comparing multiple fitted SAEM models
 using information criteria (AIC, BIC, BIC_cov).
 """
 
+from typing import List, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import List, Optional, Union
 
 from saemix.results import SaemixObject
 
@@ -98,7 +99,7 @@ def compare_saemix(
         )
 
     # Compute likelihood for each model if not already computed
-    from saemix.algorithm.likelihood import llis_saemix, llgq_saemix
+    from saemix.algorithm.likelihood import llgq_saemix, llis_saemix
 
     results = []
 

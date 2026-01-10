@@ -332,6 +332,30 @@ def mstep(
         suffStat["statphi3"] = suffStat["statphi3"] + stepsize * (
             stat3 / nchains - suffStat["statphi3"]
         )
+        statr = 0.0
+        if Dargs.get("modeltype", "structural") == "structural":
+            error_model = Dargs.get("error_model", ["constant"])
+            if len(error_model) == 1 and error_model[0] in (
+                "constant",
+                "exponential",
+                "proportional",
+            ):
+                id0 = Dargs["IdM"][: Dargs["nobs"]]
+                xm0 = Dargs["XM"][: Dargs["nobs"]]
+                yobs = Dargs["yobs"]
+                for k in range(nchains):
+                    phi_k = phi_chain[k, :, :]
+                    psi_k = transphi(phi_k, Dargs["transform_par"])
+                    fpred_k = structural_model(psi_k, id0, xm0)
+                    if error_model[0] == "exponential":
+                        fpred_k = np.log(cutoff(fpred_k))
+                    if error_model[0] == "proportional":
+                        statr += np.sum((yobs - fpred_k) ** 2 / cutoff(fpred_k**2))
+                    else:
+                        statr += np.sum((yobs - fpred_k) ** 2)
+        suffStat["statrese"] = suffStat["statrese"] + stepsize * (
+            statr / nchains - suffStat["statrese"]
+        )
 
         # Estimate mean_phi (fixed effects with covariates)
         mean_phi = _estimate_mean_phi(phiM, Uargs)
@@ -410,29 +434,44 @@ def mstep(
 
         # Residual error update
         if Dargs.get("modeltype", "structural") == "structural":
-            psiM = transphi(phiM, Dargs["transform_par"])
-            fpred = structural_model(psiM, Dargs["IdM"], Dargs["XM"])
             error_model = Dargs.get("error_model", ["constant"])
-            ytype = _normalize_ytype(Dargs.get("ytype", None), len(error_model))
-            if len(error_model) > 1 and ytype is not None:
-                for ityp, em in enumerate(error_model):
-                    if em == "exponential":
-                        mask = ytype == ityp
-                        if np.any(mask):
-                            fpred[mask] = np.log(cutoff(fpred[mask]))
-            elif len(error_model) == 1 and error_model[0] == "exponential":
-                fpred = np.log(cutoff(fpred))
-            new_pres = _estimate_residual(
-                Dargs["yM"], fpred, error_model, ytype, varList["pres"]
-            )
-            if kiter <= opt["nbiter_sa"]:
-                varList["pres"] = np.maximum(
-                    varList["pres"] * opt["alpha1_sa"], new_pres
-                )
+            if len(error_model) == 1 and error_model[0] in (
+                "constant",
+                "exponential",
+                "proportional",
+            ):
+                sig2 = suffStat["statrese"] / Dargs["nobs"]
+                target = np.sqrt(max(sig2, 1e-10))
+                idx = 1 if error_model[0] == "proportional" else 0
+                if kiter <= opt["nbiter_sa"]:
+                    varList["pres"][idx] = max(
+                        varList["pres"][idx] * opt["alpha1_sa"], target
+                    )
+                else:
+                    varList["pres"][idx] = target
             else:
-                varList["pres"] = varList["pres"] + stepsize * (
-                    new_pres - varList["pres"]
+                psiM = transphi(phiM, Dargs["transform_par"])
+                fpred = structural_model(psiM, Dargs["IdM"], Dargs["XM"])
+                ytype = _normalize_ytype(Dargs.get("ytype", None), len(error_model))
+                if len(error_model) > 1 and ytype is not None:
+                    for ityp, em in enumerate(error_model):
+                        if em == "exponential":
+                            mask = ytype == ityp
+                            if np.any(mask):
+                                fpred[mask] = np.log(cutoff(fpred[mask]))
+                elif len(error_model) == 1 and error_model[0] == "exponential":
+                    fpred = np.log(cutoff(fpred))
+                new_pres = _estimate_residual(
+                    Dargs["yM"], fpred, error_model, ytype, varList["pres"]
                 )
+                if kiter <= opt["nbiter_sa"]:
+                    varList["pres"] = np.maximum(
+                        varList["pres"] * opt["alpha1_sa"], new_pres
+                    )
+                else:
+                    varList["pres"] = varList["pres"] + stepsize * (
+                        new_pres - varList["pres"]
+                    )
 
     return {
         "varList": varList,

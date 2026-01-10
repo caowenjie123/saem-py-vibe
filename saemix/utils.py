@@ -1,36 +1,221 @@
 import warnings
+
 import numpy as np
 from scipy.stats import norm
 
-# 数值常量
+# Numerical constants for parameter transformations and numerical safety
 LOG_EPS = 1e-10
 LOGIT_EPS = 1e-10
 
 
-def transphi(phi, tr, verbose: bool = False):
+def _apply_log_transform(psi_vals: np.ndarray, verbose: bool = False) -> np.ndarray:
     """
-    将 phi (未变换的参数) 转换为 psi (变换后的参数)
+    Apply log transformation: psi = exp(phi)
 
-    增加数值防护，防止 NaN/Inf
+    The log transform maps untransformed parameters to positive values via:
+        psi = exp(phi)
 
-    参数
-    -----
-    phi : np.ndarray
-        未变换的参数矩阵
-    tr : np.ndarray
-        变换类型向量 (0=normal, 1=log-normal, 2=probit, 3=logit)
+    This does not need clipping since exp produces finite output for all finite inputs.
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Untransformed parameter values to apply log transform to.
     verbose : bool, optional
-        是否输出警告信息，默认 False
+        Whether to output warning messages (default False).
 
-    返回
-    -----
+    Returns
+    -------
     np.ndarray
-        变换后的参数矩阵
+        Log-transformed parameter values.
 
     Raises
     ------
     ValueError
-        如果变换产生溢出（Inf 值）
+        If log transformation produces Inf (input values too large).
+    """
+    transformed = np.exp(psi_vals)
+
+    # Check for overflow
+    if np.any(np.isinf(transformed)):
+        max_input = np.max(psi_vals)
+        raise ValueError(
+            f"Log transformation overflow: input values too large. "
+            f"Max input: {max_input}"
+        )
+
+    return transformed
+
+
+def _apply_probit_transform(psi_vals: np.ndarray) -> np.ndarray:
+    """
+    Apply probit transformation: psi = norm.cdf(phi)
+
+    The probit transform maps untransformed parameters to [0, 1] via:
+        psi = Phi(phi)
+
+    where Phi is the standard normal cumulative distribution function.
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Untransformed parameter values to apply probit transform to.
+
+    Returns
+    -------
+    np.ndarray
+        Probit-transformed parameter values in [0, 1].
+    """
+    return norm.cdf(psi_vals)
+
+
+def _apply_logit_transform(psi_vals: np.ndarray) -> np.ndarray:
+    """
+    Apply logit transformation: psi = log(psi / (1 - psi))
+
+    The logit transform maps untransformed parameters to [0, 1] via:
+        psi = log(phi / (1 - phi))
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Untransformed parameter values to apply logit transform to.
+
+    Returns
+    -------
+    np.ndarray
+        Logit-transformed parameter values in [0, 1].
+    """
+    # Formula: psi = 1 / (1 + exp(-phi)) = exp(phi) / (1 + exp(phi))
+    # For numerical stability: psi = 1 - 1/(1 + exp(-phi)) + exp(-phi) / (1 + exp(-phi))
+    exp_phi = np.exp(-psi_vals)
+    transformed = 1 / (1 + exp_phi)
+
+    return transformed
+
+
+def _inverse_log_transform(psi_vals: np.ndarray, verbose: bool = False) -> np.ndarray:
+    """
+    Apply inverse log transformation: phi = log(psi)
+
+    Clips input to prevent log(0) = -Inf.
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Log-transformed parameter values to invert.
+    verbose : bool, optional
+        Whether to output warning messages (default False).
+
+    Returns
+    -------
+    np.ndarray
+        Untransformed parameter values (original scale).
+    """
+    original_values = psi_vals.copy()
+    clipped = np.clip(psi_vals, LOG_EPS, None)
+
+    if verbose and np.any(original_values < LOG_EPS):
+        n_clipped = np.sum(original_values < LOG_EPS)
+        warnings.warn(f"Log inverse transform: {n_clipped} values clipped to {LOG_EPS}")
+
+    return np.log(clipped)
+
+
+def _inverse_probit_transform(
+    psi_vals: np.ndarray, verbose: bool = False
+) -> np.ndarray:
+    """
+    Apply inverse probit transformation: phi = norm.ppf(psi)
+
+    Clips input to [LOGIT_EPS, 1 - LOGIT_EPS] before applying norm.ppf.
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Probit-transformed parameter values to invert.
+    verbose : bool, optional
+        Whether to output warning messages (default False).
+
+    Returns
+    -------
+    np.ndarray
+        Untransformed parameter values (original scale).
+    """
+    original_values = psi_vals.copy()
+    clipped = np.clip(psi_vals, LOGIT_EPS, 1 - LOGIT_EPS)
+
+    if verbose and np.any(
+        (original_values < LOGIT_EPS) | (original_values > 1 - LOGIT_EPS)
+    ):
+        warnings.warn(
+            f"Probit inverse transform: values clipped to ({LOGIT_EPS}, {1 - LOGIT_EPS})"
+        )
+
+    return norm.ppf(clipped)
+
+
+def _inverse_logit_transform(psi_vals: np.ndarray, verbose: bool = False) -> np.ndarray:
+    """
+    Apply inverse logit transformation: phi = log(psi / (1 - psi))
+
+    Clips input to [LOGIT_EPS, 1 - LOGIT_EPS] to prevent log(0) and log(inf).
+
+    Parameters
+    ----------
+    psi_vals : np.ndarray
+        Logit-transformed parameter values to invert.
+    verbose : bool, optional
+        Whether to output warning messages (default False).
+
+    Returns
+    -------
+    np.ndarray
+        Untransformed parameter values (original scale).
+    """
+    original_values = psi_vals.copy()
+    clipped = np.clip(psi_vals, LOGIT_EPS, 1 - LOGIT_EPS)
+
+    if verbose and np.any(
+        (original_values < LOGIT_EPS) | (original_values > 1 - LOGIT_EPS)
+    ):
+        warnings.warn(
+            f"Logit inverse transform: values clipped to ({LOGIT_EPS}, {1 - LOGIT_EPS})"
+        )
+
+    return np.log(clipped / (1 - clipped))
+
+
+def transphi(phi, tr, verbose: bool = False):
+    """
+    Transform phi (untransformed parameters) to psi (transformed parameters).
+
+    Applies parameter transformations element-wise based on transform type vector:
+    - 0: normal (identity)
+    - 1: log-normal (exp transform)
+    - 2: probit (normal CDF transform)
+    - 3: logit (logistic transform)
+
+    Includes numerical safety checks to prevent NaN/Inf.
+
+    Parameters
+    ----------
+    phi : np.ndarray
+        Untransformed parameter matrix.
+    tr : np.ndarray
+        Transform type vector (0=normal, 1=log-normal, 2=probit, 3=logit).
+    verbose : bool, optional
+        Whether to output warning messages (default False).
+
+    Returns
+    -------
+    np.ndarray
+        Transformed parameter matrix.
+
+    Raises
+    ------
+    ValueError
+        If transformation produces overflow (Inf values).
     """
     psi = phi.copy()
     if phi.ndim == 1:
@@ -41,59 +226,65 @@ def transphi(phi, tr, verbose: bool = False):
 
     tr = np.array(tr)
 
-    # Log 变换 (tr == 1): psi = exp(phi)
+    # Apply log transform (tr == 1): psi = exp(phi)
     i1 = np.where(tr == 1)[0]
     if len(i1) > 0:
-        # 无需 clip，因为 exp 对任何有限输入都产生有限输出
-        psi[:, i1] = np.exp(psi[:, i1])
-        # 检查溢出
-        if np.any(np.isinf(psi[:, i1])):
-            max_input = np.max(phi[:, i1]) if phi.ndim > 1 else np.max(phi[i1])
-            raise ValueError(
-                f"Log transformation overflow: input values too large. "
-                f"Max input: {max_input}"
-            )
+        psi[:, i1] = _apply_log_transform(phi[:, i1], verbose)
 
-    # Probit 变换 (tr == 2): psi = norm.cdf(phi)
+    # Apply probit transform (tr == 2): psi = norm.cdf(phi)
     i2 = np.where(tr == 2)[0]
     if len(i2) > 0:
-        psi[:, i2] = norm.cdf(psi[:, i2])
+        psi[:, i2] = _apply_probit_transform(phi[:, i2])
 
-    # Logit 变换 (tr == 3): psi = 1 / (1 + exp(-phi))
+    # Apply logit transform (tr == 3): psi = 1 / (1 + exp(-phi))
     i3 = np.where(tr == 3)[0]
     if len(i3) > 0:
-        psi[:, i3] = 1 / (1 + np.exp(-psi[:, i3]))
+        psi[:, i3] = _apply_logit_transform(phi[:, i3])
 
     if was_1d:
         psi = psi.flatten()
+
+    # Final finite check
+    if np.any(~np.isfinite(psi)):
+        bad_indices = np.where(~np.isfinite(phi))
+        raise ValueError(
+            f"Transformation produced non-finite values at indices {bad_indices}. "
+            f"Input range: [{np.nanmin(phi)}, {np.nanmax(phi)}]"
+        )
 
     return psi
 
 
 def transpsi(psi, tr, verbose: bool = False):
     """
-    将 psi (变换后的参数) 转换为 phi (未变换的参数)
+    Transform psi (transformed parameters) to phi (untransformed parameters).
 
-    增加数值防护，防止 NaN/Inf
+    Applies inverse parameter transformations element-wise based on transform type vector:
+    - 0: normal (identity)
+    - 1: log-normal (log transform)
+    - 2: probit (normal PPF transform)
+    - 3: logit (logistic inverse transform)
 
-    参数
-    -----
+    Includes numerical safety checks with clipping to prevent log(0) = -Inf.
+
+    Parameters
+    ----------
     psi : np.ndarray
-        变换后的参数矩阵
+        Transformed parameter matrix.
     tr : np.ndarray
-        变换类型向量 (0=normal, 1=log-normal, 2=probit, 3=logit)
+        Transform type vector (0=normal, 1=log-normal, 2=probit, 3=logit).
     verbose : bool, optional
-        是否输出警告信息，默认 False
+        Whether to output warning messages (default False).
 
-    返回
-    -----
+    Returns
+    -------
     np.ndarray
-        未变换的参数矩阵
+        Untransformed parameter matrix.
 
     Raises
     ------
     ValueError
-        如果变换产生非有限值（NaN 或 Inf）
+        If transformation produces non-finite values (NaN or Inf).
     """
     phi = psi.copy()
     if phi.ndim == 1:
@@ -104,45 +295,22 @@ def transpsi(psi, tr, verbose: bool = False):
 
     tr = np.array(tr)
 
-    # Log 逆变换 (tr == 1): phi = log(psi)
+    # Apply inverse log transform (tr == 1): phi = log(psi)
     i1 = np.where(tr == 1)[0]
     if len(i1) > 0:
-        # Clip 防止 log(0) = -Inf
-        original_values = phi[:, i1].copy()
-        clipped = np.clip(phi[:, i1], LOG_EPS, None)
-        if verbose and np.any(original_values < LOG_EPS):
-            n_clipped = np.sum(original_values < LOG_EPS)
-            warnings.warn(
-                f"Log inverse transform: {n_clipped} values clipped to {LOG_EPS}"
-            )
-        phi[:, i1] = np.log(clipped)
+        phi[:, i1] = _inverse_log_transform(psi[:, i1], verbose)
 
-    # Probit 逆变换 (tr == 2): phi = norm.ppf(psi)
+    # Apply inverse probit transform (tr == 2): phi = norm.ppf(psi)
     i2 = np.where(tr == 2)[0]
     if len(i2) > 0:
-        original_values = phi[:, i2].copy()
-        clipped = np.clip(phi[:, i2], LOGIT_EPS, 1 - LOGIT_EPS)
-        if verbose and np.any(
-            (original_values < LOGIT_EPS) | (original_values > 1 - LOGIT_EPS)
-        ):
-            warnings.warn("Probit inverse transform: values clipped to (eps, 1-eps)")
-        phi[:, i2] = norm.ppf(clipped)
+        phi[:, i2] = _inverse_probit_transform(psi[:, i2], verbose)
 
-    # Logit 逆变换 (tr == 3): phi = log(psi / (1 - psi))
+    # Apply inverse logit transform (tr == 3): phi = log(psi / (1 - psi))
     i3 = np.where(tr == 3)[0]
     if len(i3) > 0:
-        # Clip 防止 log(0) 和 log(inf)
-        original_values = phi[:, i3].copy()
-        clipped = np.clip(phi[:, i3], LOGIT_EPS, 1 - LOGIT_EPS)
-        if verbose and np.any(
-            (original_values < LOGIT_EPS) | (original_values > 1 - LOGIT_EPS)
-        ):
-            warnings.warn(
-                f"Logit inverse transform: values clipped to ({LOGIT_EPS}, {1-LOGIT_EPS})"
-            )
-        phi[:, i3] = np.log(clipped / (1 - clipped))
+        phi[:, i3] = _inverse_logit_transform(psi[:, i3], verbose)
 
-    # 最终有限性检查
+    # Final finite check
     if np.any(~np.isfinite(phi)):
         bad_indices = np.where(~np.isfinite(phi))
         raise ValueError(
@@ -206,10 +374,20 @@ def mydiag(nrow=None, ncol=None, x=None):
             return np.diag(x)
 
 
-def cutoff(x, eps=1e-10):
+def cutoff(x, eps=None):
     """
     将小于 eps 的值截断为 eps
+
+    参数
+    -----
+    x : array-like
+        输入数组
+    eps : float, optional
+        截断阈值，默认为最小正浮点数 (np.finfo(float).tiny ≈ 2.225e-308)
+        以匹配 R 的 .Machine$double.xmin
     """
+    if eps is None:
+        eps = np.finfo(float).tiny
     x = np.array(x)
     return np.maximum(x, eps)
 

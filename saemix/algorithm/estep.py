@@ -1,12 +1,14 @@
-import numpy as np
 from typing import Optional
-from saemix.utils import cutoff, transphi
+
+import numpy as np
+from scipy.optimize import minimize
+
 from saemix.algorithm.map_estimation import (
-    error_function,
     conditional_distribution_c,
     conditional_distribution_d,
+    error_function,
 )
-from scipy.optimize import minimize
+from saemix.utils import cutoff, transphi
 
 
 def _normalize_ytype(ytype, ntypes):

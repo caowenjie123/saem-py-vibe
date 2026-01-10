@@ -8,15 +8,16 @@ Feature: saemix-python-enhancement
 Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
 """
 
+from copy import deepcopy
+from typing import Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Dict, Tuple, Union
-from copy import deepcopy
 
-from saemix.results import SaemixObject
-from saemix.model import SaemixModel, saemix_model
+from saemix.compare import aic, bic
 from saemix.data import SaemixData
-from saemix.compare import bic, aic
+from saemix.model import SaemixModel, saemix_model
+from saemix.results import SaemixObject
 
 
 def forward_procedure(

@@ -1,9 +1,46 @@
 import warnings
+from typing import Optional
+
 import numpy as np
-from scipy.stats import t as student_t
 from numpy.polynomial.legendre import leggauss
-from saemix.utils import transphi, cutoff
+from scipy.stats import t as student_t
+
 from saemix.algorithm.map_estimation import error_function
+from saemix.utils import cutoff, transphi
+
+
+def _log_mean_exp(x: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
+    """
+    Compute log(mean(exp(x))) in a numerically stable way using log-sum-exp.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Input array
+    axis : int, optional
+        Axis along which to compute mean
+
+    Returns
+    -------
+    np.ndarray
+        log(mean(exp(x))) along specified axis
+    """
+    x = np.asarray(x)
+    if axis is None:
+        x = x.ravel()
+        axis = 0
+    x_max = np.max(x, axis=axis, keepdims=True)
+    shifted = x - x_max
+    exp_shifted = np.exp(shifted)
+    sum_exp = np.sum(exp_shifted, axis=axis, keepdims=True)
+    log_sum_exp = np.log(sum_exp) + x_max
+    # Compute mean: log(mean) = log(sum_exp / N) = log_sum_exp - log(N)
+    n = x.shape[axis]
+    result = log_sum_exp - np.log(n)
+    # Remove the dimension that was kept
+    if axis is not None:
+        result = result.squeeze(axis=axis)
+    return result
 
 
 def compute_log_likelihood_safe(
@@ -254,7 +291,13 @@ def llis_saemix(saemix_object):
     stild_phiM1 = np.repeat(np.sqrt(cond_var_phi1), MM, axis=0)
     phiM = np.repeat(cond_mean_phi, MM, axis=0)
 
-    IdM = np.tile(index, MM) + np.repeat(np.arange(MM) * data.n_subjects, len(index))
+    # IdM maps each observation (repeated MM times) to row in phiM
+    # phiM is subject-major: rows = subject i * MM + sample m
+    # subject_ids repeats index MM times (sample-major)
+    # sample_block repeats each sample index len(index) times
+    subject_ids = np.tile(index, MM)
+    sample_block = np.repeat(np.arange(MM), len(index))
+    IdM = subject_ids * MM + sample_block
     yM = np.tile(yobs, MM)
     XM = np.tile(xind, (MM, 1))
     ytypeM = np.tile(ytype_norm, MM) if ytype_norm is not None else None
@@ -300,8 +343,12 @@ def llis_saemix(saemix_object):
         e1 = np.bincount(IdM, weights=dyf, minlength=data.n_subjects * MM).reshape(
             data.n_subjects, MM
         )
+
         sume = e1 + e2 - e3
-        newa = np.mean(np.exp(sume), axis=1)
+
+        # Use log-sum-exp for numerical stability
+        log_newa = _log_mean_exp(sume, axis=1)
+        newa = np.exp(log_newa)
         meana = meana + (newa - meana) / km
         LL[km - 1] = np.sum(np.log(cutoff(meana))) + log_const
 

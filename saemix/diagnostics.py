@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.stats import norm, rankdata, ttest_1samp, chi2, shapiro
+from scipy.stats import chi2, norm, rankdata, shapiro, ttest_1samp
+
 from saemix.algorithm.map_estimation import error_function
 
 

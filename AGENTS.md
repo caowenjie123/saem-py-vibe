@@ -1,183 +1,203 @@
 # AGENTS.md
 
-This file provides guidance to Qoder (qoder.com) when working with code in this repository.
+This file provides guidance to agentic coding assistants working in this repository.
 
 ## Project Overview
 
-This is a Python implementation of the SAEM (Stochastic Approximation Expectation Maximization) algorithm for nonlinear mixed effects models, ported from the R saemix package. The library is used for parameter estimation in pharmacokinetic/pharmacodynamic (PK/PD) modeling and other applications involving hierarchical nonlinear models.
+Python implementation of the SAEM (Stochastic Approximation Expectation Maximization)
+algorithm for nonlinear mixed effects models. This is a Python port of the R
+`saemix` package used for PK/PD parameter estimation in hierarchical nonlinear models.
+
+## Editor Rules
+
+- No `.cursorrules`, `.cursor/rules/`, or `.github/copilot-instructions.md` found.
+- Only follow rules defined in this file and other AGENTS.md files.
 
 ## Commands
 
+### Installation
+```bash
+pip install -r requirements.txt
+pip install -e .
+pip install ".[dev]"
+pip install ".[plot]"
+```
+
 ### Testing
 ```bash
-pytest                           # Run all tests
-pytest tests/test_data.py       # Run specific test file
-pytest -v --tb=short            # Verbose output with short traceback
-pytest --cov=saemix             # Run with coverage
+pytest
+pytest tests/test_data.py
+pytest tests/test_data.py::TestSaemixData::test_basic_creation
+pytest -v --tb=short
+pytest --cov=saemix
+HYPOTHESIS_PROFILE=ci pytest tests/ -v --tb=short
+HYPOTHESIS_PROFILE=dev pytest tests/
+HYPOTHESIS_PROFILE=debug pytest tests/
 ```
+
+Notes:
+- Default pytest options are configured in `pyproject.toml` (`-v --tb=short`).
+- Hypothesis profiles are defined in `tests/conftest.py` (`ci`, `dev`, `debug`).
 
 ### Code Quality
 ```bash
-black saemix/                   # Format code
-isort saemix/                   # Sort imports
-mypy saemix/                    # Type checking
+black saemix/
+isort saemix/
+mypy saemix/
 ```
 
-### Build and Distribution
+### Build
 ```bash
-python -m build                 # Build package (creates dist/)
-pip install -e .                # Install in editable/development mode
-twine check dist/*              # Validate distribution files
+python -m build
 ```
 
-### Running Examples
+### Examples
 ```bash
-python examples/basic_example.py              # Basic usage example
-python demo_estimation.py                      # Estimation demo
+python demo_estimation.py
+python examples/basic_example.py
 ```
+
+## Code Style Guidelines
+
+### Imports
+- Order: standard library → third-party → local modules.
+- No wildcard imports.
+
+```python
+import os
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
+import pandas as pd
+
+from saemix.data import SaemixData
+```
+
+### Formatting
+- Black formatter, line length 88 (`pyproject.toml`).
+- isort profile `black` and line length 88.
+- 4 spaces for indentation, no trailing whitespace.
+
+### Type Annotations
+- Use `typing` module: `Optional`, `List`, `Dict`, `Union`, `Callable`, `Tuple`.
+- Annotate function signatures with parameter and return types.
+- Use `Optional[np.ndarray]` or `None` defaults for optional arrays.
+
+```python
+def run_saem(
+    Dargs: Dict[str, Any],
+    Uargs: Dict[str, Any],
+    rng: Optional[np.random.Generator] = None,
+) -> Dict[str, Any]:
+    ...
+```
+
+### Naming Conventions
+- Functions/variables: `snake_case`
+- Classes: `PascalCase`
+- Constants: `UPPER_SNAKE_CASE`
+- Private methods: `_leading_underscore`
+
+### Error Handling
+- Validate inputs with `isinstance()` checks.
+- Raise `TypeError` for wrong types.
+- Raise `ValueError` for invalid values (bounds, shapes, incompatible inputs).
+- Use descriptive error messages.
+
+```python
+if not isinstance(model, SaemixModel):
+    raise TypeError("model must be a SaemixModel instance")
+```
+
+### Random Number Generation
+- Use `numpy.random.Generator` for reproducibility.
+- Pass RNG through function calls instead of creating new ones.
+- Initialize from `seed` in `saemix_control()` or accept user-provided RNG.
+
+```python
+rng: Optional[np.random.Generator] = None
+if rng is None:
+    rng = np.random.default_rng(seed)
+```
+
+### Documentation
+- Use NumPy-style docstrings with Parameters, Returns, Raises sections.
+- Include type information in parameter descriptions.
+
+```python
+def transphi(phi, tr, verbose: bool = False):
+    """
+    Transform phi (untransformed) to psi (transformed) parameters.
+
+    Parameters
+    ----------
+    phi : np.ndarray
+        Untransformed parameter matrix
+    tr : np.ndarray
+        Transformation type vector (0=normal, 1=log, 2=probit, 3=logit)
+    verbose : bool, optional
+        Whether to output warnings (default False)
+
+    Returns
+    -------
+    np.ndarray
+        Transformed parameter matrix
+
+    Raises
+    ------
+    ValueError
+        If transformation produces overflow (Inf values)
+    """
+```
+
+## Critical Implementation Details
+
+### 0-based Indexing
+Model functions use 0-based indexing (critical difference from R saemix):
+- Predictors: `xidep[:, 0]` for first column.
+- Parameters: `psi[id, 0]` for first parameter.
+- Subject IDs: internal arrays use 0-based; user-facing IDs start at 1.
+
+### Model Function Signature
+```python
+def structural_model(psi: np.ndarray, id: np.ndarray, xidep: np.ndarray) -> np.ndarray:
+    """
+    Parameters
+    ----------
+    psi : (n_subjects, n_params) individual parameters
+    id : (n_obs,) subject indices (0-based)
+    xidep : (n_obs, n_predictors) predictor variables
+
+    Returns
+    -------
+    ypred : (n_obs,) predicted response
+    """
+    x1 = xidep[:, 0]
+    theta1 = psi[id, 0]
+    return theta1 * np.exp(-theta2 * x1)
+```
+
+### Parameter Transformations
+Specified via `transform_par` in `SaemixModel`:
+- `0`: normal (no transformation)
+- `1`: log-normal (exp transformation)
+- `2`: probit (norm.cdf transformation)
+- `3`: logit
+- Use `transphi()` to convert between spaces.
+
+### Dependencies
+- Required: numpy>=1.20.0, pandas>=1.3.0, scipy>=1.7.0
+- Optional plotting: matplotlib>=3.4.0
+- Check matplotlib availability with `_require_matplotlib()` helper.
 
 ## Architecture
 
-### Core Algorithm Flow
+- `saemix/algorithm/`: Core SAEM algorithm (`saem.py`, `estep.py`, `mstep.py`)
+- `saemix/data.py`: `SaemixData` data container and validation
+- `saemix/model.py`: `SaemixModel` model specification
+- `saemix/control.py`: `saemix_control()` options
+- `saemix/results.py`: `SaemixObject` result container
+- `saemix/main.py`: Main `saemix()` entry point
+- `saemix/diagnostics.py`: Diagnostics plots
 
-The SAEM algorithm execution follows this sequence:
-1. **Initialization** (`saemix/algorithm/initialization.py`): Set up data structures, initial parameter values, and random effects
-2. **Main Loop** (`saemix/algorithm/saem.py`): Iterative E-step and M-step updates
-   - **E-step** (`saemix/algorithm/estep.py`): Simulate individual parameters using MCMC
-   - **M-step** (`saemix/algorithm/mstep.py`): Update population parameters based on sufficient statistics
-3. **Post-Processing**:
-   - **MAP Estimation** (`saemix/algorithm/map_estimation.py`): Compute maximum a posteriori individual parameters
-   - **FIM** (`saemix/algorithm/fim.py`): Calculate Fisher Information Matrix for standard errors
-   - **Likelihood** (`saemix/algorithm/likelihood.py`): Compute log-likelihood using importance sampling or Gaussian quadrature
-
-### Key Classes
-
-- **SaemixData** (`saemix/data.py`): Data container managing longitudinal data with subject IDs, predictors, response, and optional covariates
-- **SaemixModel** (`saemix/model.py`): Model specification including:
-  - Structural model function `f(psi, id, xidep)` 
-  - Parameter transformations (log-normal, probit, logit)
-  - Error models (constant, proportional, combined, exponential)
-  - Covariance structure for random effects
-- **SaemixObject** (`saemix/results.py`): Result container with fitted parameters, predictions, residuals, and diagnostic information
-- **saemix_control** (`saemix/control.py`): Algorithm control parameters (iterations, chains, convergence criteria, random seed)
-
-### Critical Implementation Details
-
-#### 0-based vs 1-based Indexing
-The most important difference from R saemix is Python's 0-based indexing:
-- Model functions access `xidep[:, 0]` for first predictor (R uses `xidep[,1]`)
-- Parameter indexing: `psi[id, 0]` for first parameter (R uses `psi[id,1]`)
-- Subject IDs are converted internally: user-facing IDs start at 1, but internal arrays use 0-based indexing
-
-#### Random Number Generation
-- The package uses `numpy.random.Generator` for reproducibility
-- RNG is initialized from `seed` in control options and passed through all algorithm components
-- Set `seed` in `saemix_control()` for reproducible results
-
-#### Error Model Handling
-- Exponential error models trigger automatic log-transformation of response data
-- Original data is stored in `data.yorig` before transformation
-- Multiple error models can be specified for different response types using the `ytype` column
-
-#### Parameter Transformations
-- Transformations are specified via `transform_par` in SaemixModel:
-  - `0`: normal (no transformation)
-  - `1`: log-normal (log transformation)
-  - `2`: probit
-  - `3`: logit
-- Internal algorithms work in transformed space; `transphi()` utility converts between spaces
-
-#### SAEM Mathematical Correctness (Fixed Issues)
-Two critical mathematical issues were identified and fixed:
-
-1. **Step Size Sequence** (`saemix/algorithm/initialization.py:174`):
-   - **Fixed**: Changed from geometric decay `γₖ = γₖ₋₁ * α` to `γₖ = 1/k` after burn-in
-   - **Theory**: SAEM requires ∑γₖ → ∞ and ∑γₖ² < ∞ for convergence
-   - **Impact**: Ensures theoretical convergence guarantees are satisfied
-
-2. **Omega Update** (`saemix/algorithm/mstep.py:340-400`):
-   - **Fixed**: Complete omega update formula matching R saemix implementation:
-     ```
-     omega = statphi2/N + e1_phi'*e1_phi/N - statphi1'*e1_phi/N - e1_phi'*statphi1/N
-     ```
-   - **Previous bug**: Was missing covariate effect correction terms
-   - **Theory**: SAEM M-step must account for covariate effects on random effect parameters
-   - **Impact**: Properly estimates variance components when covariates affect random effects
-
-3. **Simulated Annealing for Omega Diagonal** (`saemix/algorithm/mstep.py:375-395`):
-   - **Fixed**: Added simulated annealing during burn-in phase for diagonal omega elements
-   - **Previous bug**: Missing SA phase that prevents premature variance collapse
-   - **Theory**: SA maintains exploration during burn-in by keeping variance estimates from shrinking too fast
-   - **Impact**: Improves convergence stability and prevents local minima
-
-### Module Organization
-
-```
-saemix/
-├── algorithm/          # Core SAEM algorithm components
-│   ├── saem.py        # Main SAEM loop (run_saem)
-│   ├── estep.py       # E-step: MCMC simulation of random effects
-│   ├── mstep.py       # M-step: parameter updates
-│   ├── initialization.py  # Algorithm initialization
-│   ├── map_estimation.py  # MAP individual parameter estimation
-│   ├── fim.py         # Fisher Information Matrix computation
-│   ├── likelihood.py  # Log-likelihood calculation (IS, GQ methods)
-│   ├── predict.py     # Predictions and residuals
-│   └── conddist.py    # Conditional distribution estimation
-├── data.py            # SaemixData class
-├── model.py           # SaemixModel class
-├── control.py         # Algorithm control options
-├── results.py         # SaemixObject and SaemixRes result classes
-├── main.py            # Main saemix() entry point
-├── diagnostics.py     # Diagnostic plots (GOF, VPC, NPDE, residuals)
-├── compare.py         # Model comparison (AIC, BIC)
-├── simulation.py      # Simulation from fitted models
-├── export.py          # Result export to CSV and files
-└── utils.py           # Utility functions (transphi, cutoff, etc.)
-```
-
-### Testing Strategy
-
-- **Property-based tests**: Use `hypothesis` for testing mathematical properties (e.g., `test_*_properties.py`)
-- **Integration tests**: Full workflow tests with realistic models (`test_integration*.py`)
-- **Regression tests**: Verify consistency with R saemix results (`test_regression.py`)
-- **Build verification**: Ensure package builds correctly for PyPI (`test_build_verification.py`)
-
-### Common Model Definition Pattern
-
-```python
-def structural_model(psi, id, xidep):
-    """
-    Model function signature required by saemix.
-    
-    Parameters:
-    - psi: (n_subjects, n_params) individual parameters
-    - id: (n_obs,) subject indices (0-based internally)
-    - xidep: (n_obs, n_predictors) predictor variables
-    
-    Returns:
-    - ypred: (n_obs,) predicted response
-    """
-    # Extract predictors (0-based indexing)
-    x1 = xidep[:, 0]
-    x2 = xidep[:, 1]
-    
-    # Extract individual parameters (0-based indexing)
-    theta1 = psi[id, 0]
-    theta2 = psi[id, 1]
-    
-    # Compute predictions
-    ypred = ... 
-    
-    return ypred
-```
-
-### Dependencies
-
-- **Required**: numpy, pandas, scipy
-- **Optional**: matplotlib (for plotting functions)
-- Plotting functions check for matplotlib availability via `_require_matplotlib()` helper
-
-### Design Documentation
-
-See `DESIGN.md` for comprehensive design rationale, including detailed R-to-Python migration considerations, data structure mappings, and API design decisions.
+See `DESIGN.md` for R-to-Python migration rationale and design details.
