@@ -291,13 +291,13 @@ def llis_saemix(saemix_object):
     stild_phiM1 = np.repeat(np.sqrt(cond_var_phi1), MM, axis=0)
     phiM = np.repeat(cond_mean_phi, MM, axis=0)
 
-    # IdM maps each observation (repeated MM times) to row in phiM
-    # phiM is subject-major: rows = subject i * MM + sample m
-    # subject_ids repeats index MM times (sample-major)
-    # sample_block repeats each sample index len(index) times
-    subject_ids = np.tile(index, MM)
-    sample_block = np.repeat(np.arange(MM), len(index))
-    IdM = subject_ids * MM + sample_block
+    # IdM maps each observation to the corresponding row in phiM
+    # phiM layout: rows 0 to N-1 are sample 0, rows N to 2N-1 are sample 1, etc.
+    # Formula: IdM = sample_id * N + subject_id
+    # This matches R: rep(0:(MM-1), each=ntot.obs) * N + rep(index, MM)
+    sample_block = np.repeat(np.arange(MM), len(index))  # 0,0,...,0,1,1,...,1,...
+    subject_ids = np.tile(index, MM)  # index repeated MM times
+    IdM = sample_block * data.n_subjects + subject_ids
     yM = np.tile(yobs, MM)
     XM = np.tile(xind, (MM, 1))
     ytypeM = np.tile(ytype_norm, MM) if ytype_norm is not None else None

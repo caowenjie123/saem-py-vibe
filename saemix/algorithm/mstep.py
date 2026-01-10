@@ -378,10 +378,12 @@ def mstep(
                 - (e1_phi.T @ suffStat["statphi1"]) / N
             )
 
+
             omega_full[np.ix_(ind_eta, ind_eta)] = omega_eta
 
-        # Ensure non-negative values (numerical safety)
-        omega_full = np.where(omega_full < 0, 1e-6, omega_full)
+        # Note: We do NOT clip individual elements here as that can break
+        # the positive-definiteness structure. The _ensure_positive_definite
+        # function properly handles this via eigenvalue correction.
 
         # Apply covariance model structure (which elements to estimate)
         omega_new = np.zeros_like(varList["omega"])
