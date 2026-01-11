@@ -71,20 +71,20 @@ def _apply_probit_transform(psi_vals: np.ndarray) -> np.ndarray:
 
 def _apply_logit_transform(psi_vals: np.ndarray) -> np.ndarray:
     """
-    Apply logit transformation: psi = log(psi / (1 - psi))
+    Apply logistic transformation: psi = 1 / (1 + exp(-phi))
 
-    The logit transform maps untransformed parameters to [0, 1] via:
-        psi = log(phi / (1 - phi))
+    The logistic transform maps untransformed parameters to [0, 1] via:
+        psi = 1 / (1 + exp(-phi))
 
     Parameters
     ----------
     psi_vals : np.ndarray
-        Untransformed parameter values to apply logit transform to.
+        Untransformed parameter values to apply logistic transform to.
 
     Returns
     -------
     np.ndarray
-        Logit-transformed parameter values in [0, 1].
+        Logistic-transformed parameter values in [0, 1].
     """
     # Formula: psi = 1 / (1 + exp(-phi)) = exp(phi) / (1 + exp(phi))
     # For numerical stability: psi = 1 - 1/(1 + exp(-phi)) + exp(-phi) / (1 + exp(-phi))
@@ -229,24 +229,24 @@ def transphi(phi, tr, verbose: bool = False):
     # Apply log transform (tr == 1): psi = exp(phi)
     i1 = np.where(tr == 1)[0]
     if len(i1) > 0:
-        psi[:, i1] = _apply_log_transform(phi[:, i1], verbose)
+        psi[:, i1] = _apply_log_transform(psi[:, i1], verbose)
 
     # Apply probit transform (tr == 2): psi = norm.cdf(phi)
     i2 = np.where(tr == 2)[0]
     if len(i2) > 0:
-        psi[:, i2] = _apply_probit_transform(phi[:, i2])
+        psi[:, i2] = _apply_probit_transform(psi[:, i2])
 
     # Apply logit transform (tr == 3): psi = 1 / (1 + exp(-phi))
     i3 = np.where(tr == 3)[0]
     if len(i3) > 0:
-        psi[:, i3] = _apply_logit_transform(phi[:, i3])
+        psi[:, i3] = _apply_logit_transform(psi[:, i3])
 
     if was_1d:
         psi = psi.flatten()
 
     # Final finite check
     if np.any(~np.isfinite(psi)):
-        bad_indices = np.where(~np.isfinite(phi))
+        bad_indices = np.where(~np.isfinite(psi))
         raise ValueError(
             f"Transformation produced non-finite values at indices {bad_indices}. "
             f"Input range: [{np.nanmin(phi)}, {np.nanmax(phi)}]"

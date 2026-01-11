@@ -1,4 +1,7 @@
+from typing import cast
+
 import numpy as np
+import pandas as pd
 
 from saemix.data import SaemixData
 from saemix.model import SaemixModel
@@ -11,6 +14,9 @@ def initialise_main_algo(
     structural_model = saemix_model.model
     nb_parameters = saemix_model.n_parameters
     N = saemix_data.n_subjects
+    rng = saemix_options.get("rng", None)
+    if rng is None:
+        rng = np.random.default_rng()
 
     if saemix_model.modeltype == "structural":
         if len(saemix_model.error_init) > 0:
@@ -211,16 +217,21 @@ def initialise_main_algo(
         "flag_fmin": True,
     }
 
-    index = saemix_data.data["index"].values
+    data_frame = cast(pd.DataFrame, saemix_data.data)
+    index = data_frame["index"].to_numpy()
     nobs = len(index)
     nb_chains = saemix_options["nb_chains"]
     IdM = np.tile(index, nb_chains) + np.repeat(np.arange(nb_chains) * N, nobs)
-    XM = saemix_data.data[saemix_data.name_predictors].values
+    XM = data_frame[saemix_data.name_predictors].to_numpy()
     XM = np.tile(XM, (nb_chains, 1))
-    yM = np.tile(saemix_data.data[saemix_data.name_response].values, nb_chains)
+    yobs = saemix_options.get("yobs_transformed", None)
+    if yobs is None:
+        yobs = data_frame[saemix_data.name_response].to_numpy()
+    yobs = np.asarray(yobs)
+    yM = np.tile(yobs, nb_chains)
     ytype = None
-    if "ytype" in saemix_data.data.columns:
-        ytype = np.tile(saemix_data.data["ytype"].values, nb_chains)
+    if "ytype" in data_frame.columns:
+        ytype = np.tile(data_frame["ytype"].to_numpy(), nb_chains)
     NM = N * nb_chains
 
     etype_exp = [
@@ -233,7 +244,7 @@ def initialise_main_algo(
         "NM": NM,
         "N": N,
         "nobs": saemix_data.n_total_obs,
-        "yobs": saemix_data.data[saemix_data.name_response].values,
+        "yobs": yobs,
         "transform_par": saemix_model.transform_par,
         "error_model": saemix_model.error_model,
         "structural_model": structural_model,
@@ -264,7 +275,7 @@ def initialise_main_algo(
             chol_omega = np.linalg.cholesky(omega_eta)
         except np.linalg.LinAlgError:
             chol_omega = np.eye(len(i1_omega2))
-        etaM = 0.5 * np.random.randn(NM, len(i1_omega2)) @ chol_omega.T
+        etaM = 0.5 * rng.standard_normal((NM, len(i1_omega2))) @ chol_omega.T
         phiM[:, i1_omega2] = mean_phiM[:, i1_omega2] + etaM
 
     # Ensure initial parameters give finite predictions
@@ -284,7 +295,9 @@ def initialise_main_algo(
                 break
             if len(i1_omega2) > 0:
                 etaM = (
-                    0.5 * np.random.randn(len(bad_ids), len(i1_omega2)) @ chol_omega.T
+                    0.5
+                    * rng.standard_normal((len(bad_ids), len(i1_omega2)))
+                    @ chol_omega.T
                 )
                 phiM[np.ix_(bad_ids, i1_omega2)] = (
                     mean_phiM[np.ix_(bad_ids, i1_omega2)] + etaM

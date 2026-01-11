@@ -40,7 +40,8 @@ def estep(
     rng : numpy.random.Generator, optional
         Random number generator for reproducibility. If None, creates a new default RNG.
     """
-    # Use provided RNG or create a new one
+    if rng is None:
+        rng = opt.get("rng", None)
     if rng is None:
         rng = np.random.default_rng()
 
@@ -62,7 +63,13 @@ def estep(
     except np.linalg.LinAlgError:
         chol_omega = np.eye(nb_etas)
 
-    somega = np.linalg.inv(omega_eta) if nb_etas > 0 else np.zeros((0, 0))
+    if nb_etas > 0:
+        try:
+            somega = np.linalg.solve(omega_eta, np.eye(nb_etas))
+        except np.linalg.LinAlgError:
+            somega = np.linalg.pinv(omega_eta)
+    else:
+        somega = np.zeros((0, 0))
 
     mean_phiM = np.tile(mean_phi, (Uargs["nchains"], 1))
     if len(varList["ind0_eta"]) > 0:
@@ -241,7 +248,7 @@ def _compute_phi_map(mean_phi, Dargs, varList, opt):
     i1_omega2 = varList["ind_eta"]
     omega_sub = varList["omega"][np.ix_(i1_omega2, i1_omega2)]
     try:
-        iomega = np.linalg.inv(omega_sub)
+        iomega = np.linalg.solve(omega_sub, np.eye(len(i1_omega2)))
     except np.linalg.LinAlgError:
         iomega = np.eye(len(i1_omega2))
     phi_map = mean_phi.copy()
@@ -334,7 +341,7 @@ def _compute_gamma(gradf0, gradh0, varList, Dargs):
     nb_etas = len(varList["ind_eta"])
     omega_sub = varList["omega"][np.ix_(varList["ind_eta"], varList["ind_eta"])]
     try:
-        inv_omega = np.linalg.inv(omega_sub)
+        inv_omega = np.linalg.solve(omega_sub, np.eye(nb_etas))
     except np.linalg.LinAlgError:
         inv_omega = np.eye(nb_etas)
     sigma = varList["pres"][0] if len(varList.get("pres", [])) > 0 else 1.0
@@ -347,12 +354,13 @@ def _compute_gamma(gradf0, gradh0, varList, Dargs):
         temp = gradf0[mask, :] @ gradh0[i, :, :]
         mat = (temp.T @ temp) / (sigma**2) + inv_omega
         try:
-            Gamma_i = np.linalg.inv(mat)
+            Gamma_i = np.linalg.solve(mat, np.eye(nb_etas))
         except np.linalg.LinAlgError:
             Gamma_i = np.linalg.pinv(mat)
         Gamma[i, :, :] = Gamma_i
-        chol_Gamma[i, :, :] = np.linalg.cholesky(Gamma_i + 1e-10 * np.eye(nb_etas))
-        inv_Gamma[i, :, :] = np.linalg.inv(Gamma_i + 1e-10 * np.eye(nb_etas))
+        jittered = Gamma_i + 1e-10 * np.eye(nb_etas)
+        chol_Gamma[i, :, :] = np.linalg.cholesky(jittered)
+        inv_Gamma[i, :, :] = np.linalg.solve(jittered, np.eye(nb_etas))
     return Gamma, chol_Gamma, inv_Gamma
 
 

@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
+import pandas as pd
 
 from saemix.algorithm.initialization import initialise_main_algo
 from saemix.algorithm.saem import run_saem
@@ -22,17 +23,20 @@ def saemix(
     if not isinstance(data, SaemixData):
         raise TypeError("data must be a SaemixData instance")
 
-    # Handle exponential error models: log-transform response and store original
+    yobs_transformed = None
     if isinstance(model.error_model, list) and "exponential" in model.error_model:
+        data_frame = cast(pd.DataFrame, data.data)
         yname = data.name_response
-        ytype = data.data["ytype"].values if "ytype" in data.data.columns else None
-        ytype_arr = ytype.copy() if ytype is not None else None
+        ytype = (
+            data_frame["ytype"].to_numpy() if "ytype" in data_frame.columns else None
+        )
+        ytype_arr = np.asarray(ytype, dtype=int) if ytype is not None else None
         if ytype_arr is not None and len(model.error_model) > 1:
             if ytype_arr.min() >= 1 and ytype_arr.max() == len(model.error_model):
                 ytype_arr = ytype_arr - 1
         if data.yorig is None:
-            data.yorig = data.data[yname].copy()
-        yvals = data.data[yname].values.copy()
+            data.yorig = data_frame[yname].copy()
+        yvals = data_frame[yname].to_numpy().copy()
         for ityp, em in enumerate(model.error_model):
             if em != "exponential":
                 continue
@@ -42,7 +46,10 @@ def saemix(
                 mask = ytype_arr == ityp
             if np.any(mask):
                 yvals[mask] = np.log(cutoff(yvals[mask]))
-        data.data[yname] = yvals
+        yobs_transformed = yvals
+
+    if yobs_transformed is not None:
+        control["yobs_transformed"] = yobs_transformed
 
     saemix_object = SaemixObject(data=data, model=model, options=control)
 
@@ -57,7 +64,16 @@ def saemix(
 
     structural_model = model.model
 
-    results = run_saem(Dargs, Uargs, varList, opt, mean_phi, phiM, structural_model)
+    results = run_saem(
+        Dargs,
+        Uargs,
+        varList,
+        opt,
+        mean_phi,
+        phiM,
+        structural_model,
+        rng=control.get("rng"),
+    )
 
     saemix_object.results.mean_phi = results["mean_phi"]
     saemix_object.results.omega = results["varList"]["omega"]

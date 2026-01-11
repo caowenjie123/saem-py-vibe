@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.optimize import minimize
 
@@ -227,7 +226,7 @@ def map_saemix(saemix_object):
     omega_sub = results.omega[np.ix_(i1_omega2, i1_omega2)]
 
     try:
-        iomega_phi1 = np.linalg.inv(omega_sub)
+        iomega_phi1 = np.linalg.solve(omega_sub, np.eye(len(i1_omega2)))
     except np.linalg.LinAlgError:
         iomega_phi1 = np.eye(len(i1_omega2))
 

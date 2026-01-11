@@ -30,6 +30,8 @@ def _log_mean_exp(x: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
         x = x.ravel()
         axis = 0
     x_max = np.max(x, axis=axis, keepdims=True)
+    # Handle case where all values are -inf
+    all_inf_mask = x_max == -np.inf
     shifted = x - x_max
     exp_shifted = np.exp(shifted)
     sum_exp = np.sum(exp_shifted, axis=axis, keepdims=True)
@@ -37,6 +39,8 @@ def _log_mean_exp(x: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
     # Compute mean: log(mean) = log(sum_exp / N) = log_sum_exp - log(N)
     n = x.shape[axis]
     result = log_sum_exp - np.log(n)
+    # If all values were -inf, result should be -inf
+    result = np.where(all_inf_mask, -np.inf, result)
     # Remove the dimension that was kept
     if axis is not None:
         result = result.squeeze(axis=axis)
@@ -198,7 +202,12 @@ def _log_const_exponential(yobs, ytype, error_model, yorig=None):
     ybase = yorig if yorig is not None else yobs
     mask = np.isin(ytype_norm, idx_exp)
     if np.any(mask):
-        return -np.sum(ybase[mask])
+        y_clipped = cutoff(ybase[mask])
+        if np.any(y_clipped <= 0):
+            raise ValueError(
+                "Exponential error model requires positive response values for Jacobian correction"
+            )
+        return -np.sum(np.log(y_clipped))
     return 0.0
 
 
@@ -223,6 +232,9 @@ def llis_saemix(saemix_object):
     data = saemix_object.data
     res = saemix_object.results
     opts = saemix_object.options
+    rng = opts.get("rng", None)
+    if rng is None:
+        rng = np.random.default_rng()
 
     if res.cond_mean_phi is None or res.cond_var_phi is None:
         raise ValueError("cond_mean_phi/cond_var_phi not available. Run SAEM first.")
@@ -233,7 +245,10 @@ def llis_saemix(saemix_object):
 
     i1_omega2 = model.indx_omega
     nphi1 = len(i1_omega2)
-    yobs = data.data[data.name_response].values
+    yobs = opts.get("yobs_transformed", None)
+    if yobs is None:
+        yobs = data.data[data.name_response].values
+    yobs = np.asarray(yobs)
     yorig = getattr(data, "yorig", None)
     xind = data.data[data.name_predictors].values
     index = data.data["index"].values
@@ -275,7 +290,7 @@ def llis_saemix(saemix_object):
     pres = res.respar
     omega_sub = Omega[np.ix_(i1_omega2, i1_omega2)]
     try:
-        IOmega = np.linalg.inv(omega_sub)
+        IOmega = np.linalg.solve(omega_sub, np.eye(nphi1))
     except np.linalg.LinAlgError:
         IOmega = np.eye(nphi1)
 
@@ -310,7 +325,11 @@ def llis_saemix(saemix_object):
     LL = np.zeros(KM)
 
     for km in range(1, KM + 1):
-        r = student_t.rvs(df=opts.get("nu_is", 4), size=(data.n_subjects * MM, nphi1))
+        r = student_t.rvs(
+            df=opts.get("nu_is", 4),
+            size=(data.n_subjects * MM, nphi1),
+            random_state=rng,
+        )
         phiM1 = mtild_phiM1 + stild_phiM1 * r
         dphiM = phiM1 - mean_phiM1
         d2 = -0.5 * (np.sum(dphiM * (dphiM @ IOmega), axis=1) + c2)
@@ -382,7 +401,10 @@ def llgq_saemix(saemix_object):
 
     i1_omega2 = model.indx_omega
     nphi1 = len(i1_omega2)
-    yobs = data.data[data.name_response].values
+    yobs = opts.get("yobs_transformed", None)
+    if yobs is None:
+        yobs = data.data[data.name_response].values
+    yobs = np.asarray(yobs)
     yorig = getattr(data, "yorig", None)
     xind = data.data[data.name_predictors].values
     index = data.data["index"].values
@@ -411,7 +433,7 @@ def llgq_saemix(saemix_object):
     pres = res.respar
     omega_sub = Omega[np.ix_(i1_omega2, i1_omega2)]
     try:
-        IOmega = np.linalg.inv(omega_sub)
+        IOmega = np.linalg.solve(omega_sub, np.eye(nphi1))
     except np.linalg.LinAlgError:
         IOmega = np.eye(nphi1)
 

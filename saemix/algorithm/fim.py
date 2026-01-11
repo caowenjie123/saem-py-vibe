@@ -1,7 +1,6 @@
 import numpy as np
 
 
-
 def fim_saemix(saemix_object):
     """
     计算Fisher信息矩阵
@@ -59,7 +58,7 @@ def fim_saemix(saemix_object):
     results.fim = fim
 
     try:
-        cov_fim = np.linalg.inv(fim)
+        cov_fim = np.linalg.solve(fim, np.eye(fim.shape[0]))
         se_fixed = np.sqrt(np.diag(cov_fim[:npar]))
         se_omega = np.sqrt(np.diag(cov_fim[npar : npar + nomega]))
         se_res = (
